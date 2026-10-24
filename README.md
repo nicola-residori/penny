@@ -57,3 +57,9 @@ Vedi `docs/decisioni.md`.
 
 ## Specifiche originali
 **Da reintegrare:** il README funzionale integrale e `docs/specifiche-funzionali.md` non erano presenti nel repository iniziale. Questo bootstrap conserva i requisiti noti senza sostituire il documento originale.
+
+## M0-02 — CI e controlli automatici
+
+Workflow: `.github/workflows/ci.yml`. Esegue test Maven su Java 21, test e build frontend su Node 22 e controlli base per evitare il versionamento di `.env` e artefatti generati. Dettagli e limiti: `docs/m0-02-ci.md`.
+
+Stato M0-02: **implementata, in attesa della verifica dei workflow su GitHub**. La milestone si chiude dopo il primo esito verde delle Actions.
