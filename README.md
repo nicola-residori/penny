@@ -63,3 +63,7 @@ Vedi `docs/decisioni.md`.
 Workflow: `.github/workflows/ci.yml`. Esegue test Maven su Java 21, test e build frontend su Node 22 e controlli base per evitare il versionamento di `.env` e artefatti generati. Dettagli e limiti: `docs/m0-02-ci.md`.
 
 Stato M0-02: **implementata, in attesa della verifica dei workflow su GitHub**. La milestone si chiude dopo il primo esito verde delle Actions.
+
+## M0-03 — Architettura e convenzioni (in corso)
+
+Definite le convenzioni per monolite modulare, organizzazione per feature, DTO e gestione errori, confini frontend/backend, migrazioni e differenza tra sviluppo e produzione. Introdotti il contratto di errore API e un client HTTP condiviso iniziale. Dettagli, limiti e verifiche in `docs/m0-03-architecture.md`. Il branch di lavoro è `feature/m0-03-architecture`; il completamento richiede test, PR e merge.
