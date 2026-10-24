@@ -21,3 +21,10 @@
 
 ## Nota di bootstrap
 M0-01 prepara soltanto infrastruttura e smoke test, senza implementare funzionalità CRM.
+
+## M0-03 — Convenzioni (2026-10-24)
+- Monolite modulare; backend organizzato per modulo funzionale, con separazione web/application/domain/persistence quando serve.
+- Frontend organizzato per feature e client API condiviso.
+- Risposte di errore con codice stabile, messaggio pubblico e timestamp; non esporre dettagli interni.
+- Docker Compose attuale solo per sviluppo: produzione on-prem richiede configurazione separata e hardening.
+- `*.tsbuildinfo` esclusi da Git.

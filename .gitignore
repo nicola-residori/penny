@@ -5,3 +5,6 @@
 **/target/
 **/node_modules/
 **/dist/
+
+# TypeScript incremental build metadata
+*.tsbuildinfo
