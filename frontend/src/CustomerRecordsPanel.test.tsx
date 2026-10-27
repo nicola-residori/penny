@@ -5,6 +5,16 @@ import {render,screen,cleanup,waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import CustomerRecordsPanel from './CustomerRecordsPanel';
 afterEach(()=>{cleanup();vi.unstubAllGlobals();});
+it('opens a grouped record dossier without exposing financial fields to a non-financial reader',async()=>{
+ vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>({items:[{id:4,kind:'CONTRACT',customerId:1,siteId:null,name:'Supporto',status:'ACTIVE',details:{contractType:'GENERAL',price:'123.45',collaboratorCost:'20.00'}}],total:1})})));
+ render(<CustomerRecordsPanel kind="CONTRACT" customerId={1} canWrite={false} canReadFinancials={false}/>);
+ await userEvent.click(await screen.findByRole('button',{name:'Supporto'}));
+ expect(screen.getByRole('region',{name:'Informazioni principali'})).toBeTruthy();
+ expect(screen.getByRole('region',{name:'Dettagli della scheda'})).toBeTruthy();
+ expect(screen.queryByText('Prezzo di vendita unitario')).toBeNull();
+ expect(screen.queryByText('Costo collaboratore')).toBeNull();
+ expect(screen.queryByRole('button',{name:'Modifica scheda'})).toBeNull();
+});
 it('creates customer training without a sale with manual participants and exact price',async()=>{
  const calls=vi.fn(async(input:RequestInfo|URL,init?:RequestInit)=>{const url=String(input);return {ok:true,json:async()=>url==='/api/auth/csrf'?{token:'csrf'}:init?.method==='POST'?{id:5}:url.includes('/contacts')?[]:{items:[],total:0}};});vi.stubGlobal('fetch',calls);
  render(<CustomerRecordsPanel kind="TRAINING" customerId={1} canWrite canReadCustomers={false} canReadCatalog={false}/>);const user=userEvent.setup();await user.click(screen.getByRole('button',{name:'Nuovo corso'}));await user.type(screen.getByLabelText('Nome *'),'Corso CAD');await user.type(screen.getByLabelText(/Prezzo di vendita/),'123.45');await user.click(screen.getByRole('button',{name:'Aggiungi partecipante'}));await user.type(screen.getByLabelText('Nome partecipante 1'),'Anna');await user.click(screen.getByRole('button',{name:'Salva scheda'}));

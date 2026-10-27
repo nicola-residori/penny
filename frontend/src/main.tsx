@@ -23,6 +23,7 @@ import './trash.css';
 import TrashPanel from './TrashPanel';
 import './customer-reference.css';
 import './select-controls.css';
+import './dossier-theme.css';
 
 type Profile={canReadTraining?:boolean;canWriteTraining?:boolean;canReadContracts?:boolean;canWriteContracts?:boolean;canReadActivities?:boolean;canWriteActivities?:boolean;canManageData?:boolean;canUseTrash?:boolean;canDeleteRecords?:boolean;canRestoreTrash?:boolean;email:string;name:string;mustChangePassword:boolean;canManageUsers?:boolean;canReadCustomers?:boolean;canWriteCustomers?:boolean;canReadProducts?:boolean;canWriteProducts?:boolean;canReadCatalog?:boolean;canWriteCatalog?:boolean;canReadSales?:boolean;canWriteSales?:boolean;canReadInventory?:boolean;canReadAllocations?:boolean;canWriteAllocations?:boolean;canReadWorkstations?:boolean;canWriteWorkstations?:boolean};
 

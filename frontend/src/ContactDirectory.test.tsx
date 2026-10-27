@@ -5,6 +5,15 @@ import {render,screen,cleanup,waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ContactDirectory from './ContactDirectory';
 afterEach(()=>{cleanup();vi.unstubAllGlobals();});
+it('opens a contact as a dossier and enters editing only through its edit action',async()=>{
+ vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>({items:[{id:1,fullName:'Maria Rossi',email:'maria@example.invalid',phone:'123',links:[{customerId:10,customerName:'Atlas',siteId:null,role:'Acquisti',isPrimary:true}]}],total:1})})));
+ render(<ContactDirectory canWrite/>);
+ await userEvent.click(await screen.findByRole('button',{name:'Maria Rossi'}));
+ expect(screen.getByRole('region',{name:'Clienti, sedi e ruoli'})).toBeTruthy();
+ expect(screen.queryByLabelText('Nome completo *')).toBeNull();
+ await userEvent.click(screen.getByRole('dialog').querySelector('.dossier-actions button') as HTMLButtonElement);
+ expect((screen.getByLabelText('Nome completo *') as HTMLInputElement).value).toBe('Maria Rossi');
+});
 it('requires a customer before creating a contact and supports an optional site',async()=>{
  const fetcher=vi.fn(async(path:unknown,options?:RequestInit)=>({ok:true,json:async()=>String(path).includes('/csrf')?{token:'test'}:String(path).includes('/api/customers?')?{items:[{id:10,name:'Atlas'}],total:1}:{items:[],total:0}}));vi.stubGlobal('fetch',fetcher);
  render(<ContactDirectory canWrite/>);const user=userEvent.setup();await user.click(screen.getByRole('button',{name:'Nuovo contatto'}));await user.type(screen.getByLabelText('Nome completo *'),'Maria Rossi');

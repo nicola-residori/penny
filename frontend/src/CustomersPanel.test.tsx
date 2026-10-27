@@ -1,10 +1,23 @@
 // @vitest-environment jsdom
 import React from 'react';
 import {it,expect,vi,afterEach} from 'vitest';
-import {render,screen,cleanup,waitFor} from '@testing-library/react';
+import {render,screen,cleanup,waitFor,within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import CustomersPanel from './CustomersPanel';
 afterEach(()=>{cleanup();vi.unstubAllGlobals();});
+it('opens only the selected customer dossier and preserves the customer table behind the overlay',async()=>{
+ const customers=[{id:1,name:'Alfa S.r.l.',kind:'COMPANY',lifecycleStatus:'CUSTOMER',country:'Italia'},{id:2,name:'Beta S.r.l.',kind:'COMPANY',lifecycleStatus:'PROSPECT',country:'Italia'}];
+ vi.stubGlobal('fetch',vi.fn(async(url)=>({ok:true,json:async()=>String(url).includes('/customer-workspace/')?{sites:[],products:[],deadlines:[],productsTotal:0}:String(url).includes('/contacts')?[]:{items:customers,total:2}})));
+ render(<CustomersPanel canWrite={false}/>);
+ await userEvent.click(await screen.findByRole('button',{name:'Alfa S.r.l.'}));
+ const dialog=screen.getByRole('dialog',{name:'Alfa S.r.l.'});
+ expect(within(dialog).queryByRole('region',{name:'Elenco clienti'})).toBeNull();
+ expect(within(dialog).queryByText('Beta S.r.l.')).toBeNull();
+ expect(within(dialog).getByRole('tablist',{name:'Scheda cliente'})).toBeTruthy();
+ await userEvent.click(within(dialog).getByRole('button',{name:'Chiudi Alfa S.r.l.'}));
+ expect(screen.queryByRole('dialog')).toBeNull();
+ expect(screen.getByRole('button',{name:'Beta S.r.l.'})).toBeTruthy();
+});
 it('provides explicit active and archived filters with a clear selected state',async()=>{
  vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>({items:[],total:0})})));
  render(<CustomersPanel canWrite/>);const user=userEvent.setup();
