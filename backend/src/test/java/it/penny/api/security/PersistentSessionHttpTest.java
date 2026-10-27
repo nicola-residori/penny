@@ -49,4 +49,11 @@ class PersistentSessionHttpTest {
   db.update("UPDATE penny_users SET email=? WHERE email=?",longer,email);email=longer;
   String cookie=login();assertEquals(HttpStatus.OK,me(cookie).getStatusCode());assertNotNull(sessions.findById(id(cookie)));
  }
+ @Test void unauthenticatedApiRequestsDoNotCreateThirtyDaySessions(){
+  long before=db.queryForObject("SELECT count(*) FROM spring_session",Long.class);
+  var response=http.getForEntity("/api/auth/me",String.class);
+  assertEquals(HttpStatus.UNAUTHORIZED,response.getStatusCode());
+  assertTrue(response.getHeaders().getOrEmpty("Set-Cookie").stream().noneMatch(s->s.startsWith("PENNY_SESSION=")));
+  assertEquals(before,db.queryForObject("SELECT count(*) FROM spring_session",Long.class));
+ }
 }

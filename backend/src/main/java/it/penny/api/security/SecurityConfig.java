@@ -31,6 +31,9 @@ public class SecurityConfig {
   CookieCsrfTokenRepository csrf=CookieCsrfTokenRepository.withHttpOnlyFalse();
   csrf.setCookiePath("/");
   http.csrf(c->c.csrfTokenRepository(csrf).csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()))
+    // The SPA handles navigation; anonymous API requests must not create
+    // persistent sessions just to remember a URL for a server-side redirect.
+    .requestCache(c->c.disable())
     .securityContext(c->c.securityContextRepository(repository))
     .sessionManagement(s->s.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
       .sessionFixation(f->f.changeSessionId()))
