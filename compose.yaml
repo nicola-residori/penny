@@ -22,6 +22,8 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      PENNY_BOOTSTRAP_EMAIL: ${PENNY_BOOTSTRAP_EMAIL}
+      PENNY_BOOTSTRAP_PASSWORD: ${PENNY_BOOTSTRAP_PASSWORD}
     volumes:
       - ./backend:/workspace
       - maven_cache:/root/.m2
@@ -38,7 +40,7 @@ services:
       - ./frontend:/workspace
       - frontend_modules:/workspace/node_modules
     ports:
-      - "127.0.0.1:5173:5173"
+      - "${PENNY_FRONTEND_BIND:-0.0.0.0}:5173:5173"
     depends_on:
       - backend
 volumes:

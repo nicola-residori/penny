@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: penny_test
+      POSTGRES_USER: penny_test
+      POSTGRES_PASSWORD: test_only
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U penny_test -d penny_test]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+  backend-test:
+    image: maven:3.9-eclipse-temurin-21
+    working_dir: /workspace
+    volumes:
+      - ./backend:/workspace
+      - maven_cache:/root/.m2
+    environment:
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 4
+      SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: 0
+      PENNY_TEST_JDBC_URL: jdbc:postgresql://db:5432/penny_test
+      PENNY_TEST_DB_USER: penny_test
+      PENNY_TEST_DB_PASSWORD: test_only
+      PENNY_BOOTSTRAP_EMAIL: bootstrap@test.invalid
+      PENNY_BOOTSTRAP_PASSWORD: bootstrap_test_only_123
+    depends_on:
+      db:
+        condition: service_healthy
+    command: mvn test
+  frontend-test:
+    image: node:22-alpine
+    working_dir: /workspace
+    volumes:
+      - ./frontend:/workspace
+      - frontend_modules:/workspace/node_modules
+    command: sh -c 'npm ci && npm test && npm run build'
+volumes:
+  maven_cache:
+  frontend_modules:

@@ -1,0 +1,10 @@
+CREATE TABLE penny_roles (id BIGSERIAL PRIMARY KEY, code VARCHAR(80) NOT NULL UNIQUE, description VARCHAR(200) NOT NULL);
+CREATE TABLE penny_permissions (code VARCHAR(100) PRIMARY KEY, description VARCHAR(200) NOT NULL);
+CREATE TABLE penny_user_roles (user_id BIGINT NOT NULL REFERENCES penny_users(id) ON DELETE CASCADE, role_id BIGINT NOT NULL REFERENCES penny_roles(id) ON DELETE CASCADE, PRIMARY KEY(user_id,role_id));
+CREATE TABLE penny_role_permissions (role_id BIGINT NOT NULL REFERENCES penny_roles(id) ON DELETE CASCADE, permission_code VARCHAR(100) NOT NULL REFERENCES penny_permissions(code), effect VARCHAR(5) NOT NULL CHECK(effect IN ('ALLOW','DENY')), PRIMARY KEY(role_id,permission_code));
+CREATE TABLE penny_user_permissions (user_id BIGINT NOT NULL REFERENCES penny_users(id) ON DELETE CASCADE, permission_code VARCHAR(100) NOT NULL REFERENCES penny_permissions(code), effect VARCHAR(5) NOT NULL CHECK(effect IN ('ALLOW','DENY')), PRIMARY KEY(user_id,permission_code));
+ALTER TABLE penny_users ADD COLUMN session_version BIGINT NOT NULL DEFAULT 0;
+INSERT INTO penny_roles(code,description) VALUES ('ADMIN','Amministratore'),('SALES','Commerciale'),('TECH','Tecnico');
+INSERT INTO penny_permissions(code,description) VALUES ('USERS_READ','Visualizzare utenti'),('USERS_WRITE','Gestire utenti'),('ROLES_READ','Visualizzare ruoli e permessi'),('ROLES_WRITE','Gestire ruoli e permessi');
+INSERT INTO penny_role_permissions(role_id,permission_code,effect) SELECT r.id,p.code,'ALLOW' FROM penny_roles r CROSS JOIN penny_permissions p WHERE r.code='ADMIN';
+INSERT INTO penny_user_roles(user_id,role_id) SELECT u.id,r.id FROM penny_users u CROSS JOIN penny_roles r WHERE r.code='ADMIN' AND u.id=(SELECT MIN(id) FROM penny_users);

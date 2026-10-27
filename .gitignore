@@ -8,3 +8,12 @@
 
 # TypeScript incremental build metadata
 *.tsbuildinfo
+
+# Local source backups, secrets and database archives
+.penny-*/
+*.bak
+*.dump
+*.sql.gz
+.env.*
+!.env*.example
+*.bak-*

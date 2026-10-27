@@ -1,5 +1,16 @@
 # Registro decisioni — Penny
 
+## Fonti e precedenza
+
+Il riferimento funzionale fornito dall’utente è [README_PENNY](sources/README_PENNY.md). [Conformità](conformita-readme.md) e [specifiche consolidate](specifiche-funzionali.md) distinguono requisiti verificati, correzioni successive e assunzioni.
+
+Correzioni esplicite successive: contatto condiviso con almeno un cliente/prospect e sede facoltativa; Prospect→Cliente automatico alla prima vendita, nessun comando manuale; schema cliente ispirato all’allegato; inserimento pregresso senza vendita; dati demo e reset amministrativo con conferma. Origine INTERNAL/THIRD_PARTY non equivale al venditore.
+
+Le note seguenti erano presenti prima del riepilogo consegnato. Non costituiscono da sole una trascrizione completa delle risposte dell’utente. In particolare durata sessioni, provvigioni e processi futuri non vengono dichiarati implementati per effetto di questo riallineamento.
+
+## Registro storico precedente
+
+
 ## Confermate (2026-10-24)
 - Un solo sviluppatore iniziale; massimo indicativo 100 utenti.
 - Applicazione web, API REST riutilizzabili da eventuale client mobile futuro.

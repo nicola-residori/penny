@@ -1,0 +1,10 @@
+.git
+.env
+.env.*
+.penny-*
+**/node_modules
+**/target
+**/dist
+**/*.tsbuildinfo
+**/*.bak
+*.dump

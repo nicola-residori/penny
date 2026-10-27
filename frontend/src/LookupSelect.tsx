@@ -1,0 +1,10 @@
+import Pagination from './Pagination';
+import React,{useEffect,useState} from 'react';
+import {api} from './api';
+export type LookupItem={id:number;name?:string;code?:string;[key:string]:unknown};
+export default function LookupSelect({label,path,value,onChange,required=false,accept,onSelected}:{label:string;path:string;value:number;onChange:(id:number)=>void;required?:boolean;accept?:(item:LookupItem)=>boolean;onSelected?:(item:LookupItem|undefined)=>void}){
+ const [q,setQ]=useState(''),[page,setPage]=useState(0),[items,setItems]=useState<LookupItem[]>([]),[total,setTotal]=useState(0),[error,setError]=useState(''),[loading,setLoading]=useState(false);
+ useEffect(()=>{setPage(0);},[path]);
+ useEffect(()=>{let live=true;setLoading(true);setError('');api<{items:LookupItem[];total:number}>(path+(path.includes('?')?'&':'?')+new URLSearchParams({q,page:String(page),size:'20'})).then(r=>{if(live){setItems(r.items);setTotal(r.total);setPage(p=>Math.min(p,Math.max(0,Math.ceil(r.total/20)-1)));}}).catch(e=>{if(live)setError(String(e));}).finally(()=>{if(live)setLoading(false);});return()=>{live=false;};},[path,q,page]);
+ return <fieldset className="m2-lookup"><label>Cerca {label.toLowerCase()}<input maxLength={100} value={q} onChange={e=>{setQ(e.target.value);setPage(0);}}/></label><label>{label}<select required={required} value={value||''} onChange={e=>{const id=Number(e.target.value);onChange(id);onSelected?.(items.find(item=>item.id===id));}}><option value="">Seleziona</option>{value&&!items.some(i=>i.id===value)&&<option value={value}>Selezione attuale #{value}</option>}{items.filter(i=>!accept||accept(i)).map(i=><option key={i.id} value={i.id}>{i.code?i.code+' · ':''}{i.name||'#'+i.id}</option>)}</select></label>{loading&&<small role="status">Caricamento…</small>}{error&&<p role="alert">{error}</p>}<Pagination total={total} page={page} onPageChange={setPage} singular="risultato" plural="risultati" label={label} disabled={loading} previousLabel={"Precedenti "+label.toLowerCase()} nextLabel={"Successivi "+label.toLowerCase()}/></fieldset>;
+}

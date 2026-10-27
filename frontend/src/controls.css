@@ -1,0 +1,30 @@
+/* Control system: 44px targets, 8px spacing rhythm, one clear primary action per toolbar. */
+:root{--control-height:44px;--control-radius:10px;--control-border:#cedce3;--control-focus:#087e83}
+.penny-surface .penny-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-bottom:20px;margin-bottom:4px;border-bottom:1px solid #edf1f4}
+.penny-surface .penny-toolbar .penny-search{display:flex;align-items:center;gap:0;flex:1 1 280px;max-width:560px;min-width:220px;height:var(--control-height);margin:0;border:1px solid var(--control-border);border-radius:var(--control-radius);background:#f9fbfc;transition:border-color .16s,box-shadow .16s}
+.penny-surface .penny-search:focus-within{border-color:var(--control-focus);box-shadow:0 0 0 3px #087e8314;background:white}
+.penny-search-icon{display:flex;align-items:center;padding-left:14px;color:#718796;flex:none}
+.penny-surface .penny-search input{flex:1;min-width:0;width:100%;height:42px;min-height:0;border:0!important;border-radius:0;background:transparent;padding:0 12px;font-size:13px;outline:none;box-shadow:none}
+.penny-surface .penny-search input::placeholder{color:#81929e}
+.penny-surface .penny-search button.penny-search-submit{flex:none;align-self:stretch;min-width:70px;min-height:0;height:auto;margin:5px 5px 5px 0;padding:0 13px;border:0;border-left:1px solid #dce5eb;border-radius:0 6px 6px 0;background:transparent;color:#365d72;box-shadow:none;font-size:12px;font-weight:650}
+.penny-surface .penny-search button.penny-search-submit:hover{background:#eaf3f5;color:#135c66}
+.penny-surface .penny-segmented{display:inline-flex;align-items:center;flex:none;gap:3px;min-height:44px;padding:3px;background:#f0f4f6;border:1px solid #e1e8ed;border-radius:var(--control-radius)}
+.penny-surface .penny-segmented button{display:inline-flex;align-items:center;justify-content:center;min-width:72px;min-height:36px;height:36px;margin:0;padding:0 13px;border:1px solid transparent;border-radius:7px;background:transparent;color:#647b8b;font-size:12px;font-weight:600;box-shadow:none;white-space:nowrap}
+.penny-surface .penny-segmented button:hover{background:#e4ecf0;color:#284b5d}
+.penny-surface .penny-segmented button[aria-pressed=true]{background:white;color:#176a70;border-color:#dae6e9;box-shadow:0 1px 3px #213f4e0c}
+.penny-surface button.penny-button-primary,.penny-surface button.penny-button-secondary,.penny-surface button.penny-button-danger-quiet{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;margin:0;padding:0 16px;border:1px solid transparent;border-radius:var(--control-radius);font-size:13px;font-weight:650;line-height:1.25;white-space:nowrap}
+.penny-surface button.penny-button-primary{background:#087e83;color:white;box-shadow:0 2px 4px #087e8314}
+.penny-surface button.penny-button-primary:hover{background:#076b70;box-shadow:0 3px 8px #087e8324}
+.penny-surface button.penny-button-secondary{background:white;color:#36586b;border-color:var(--control-border);box-shadow:none}
+.penny-surface button.penny-button-secondary:hover{background:#f3f7f8;border-color:#adc6d0}
+.penny-surface .penny-toolbar .penny-toolbar-create{margin-left:auto}
+.penny-surface .penny-toolbar>select{width:auto}
+.penny-surface button.penny-button-danger-quiet{background:white;color:#a3404b;border-color:#e1bcc2;box-shadow:none}
+.penny-surface button.penny-button-danger-quiet:hover{background:#fff1f1;border-color:#cc8f99}
+.penny-surface:not(.penny-admin-surface) input[type=checkbox]{width:20px;height:20px;min-height:20px;flex:none;accent-color:#087e83;cursor:pointer}
+.penny-surface .penny-check{display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:10px;min-height:44px;cursor:pointer;color:#36586b}
+.penny-detail-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:240px;padding:32px;text-align:center;border:1px dashed #dce7ed;border-radius:12px;background:linear-gradient(150deg,#fbfdfd,#f7fafb)}
+.penny-detail-empty>svg{color:#91b6bc;margin-bottom:16px}.penny-detail-empty h2{font-size:16px;font-weight:650;color:#3c5c6c;margin:0 0 8px}.penny-detail-empty p{max-width:330px;margin:0;font-size:13px;color:#7a8e9b;line-height:1.7}
+.penny-surface .penny-toolbar>.m2-lookup{order:3;flex:1 0 100%;max-width:560px;display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px;border-color:#e3ebf0;background:#fafcfd}.penny-toolbar>.m2-lookup label{display:grid;align-items:start;font-size:11px;gap:6px}.penny-toolbar>.m2-lookup .products-actions{grid-column:1/-1}
+@media(max-width:700px){.penny-surface .penny-toolbar{gap:10px}.penny-surface .penny-toolbar .penny-search{max-width:none;flex-basis:100%;min-width:0}.penny-surface .penny-toolbar .penny-toolbar-create{flex:1;margin-left:0}.penny-surface .penny-toolbar>select{flex:1;min-width:0}.penny-detail-empty{min-height:190px;padding:22px}.penny-surface .penny-toolbar>.m2-lookup{max-width:none}}
+@media(max-width:420px){.penny-surface .penny-segmented{flex:1}.penny-surface .penny-segmented button{flex:1;min-width:0;padding:0 11px}.penny-surface .penny-toolbar>.m2-lookup{grid-template-columns:1fr}}

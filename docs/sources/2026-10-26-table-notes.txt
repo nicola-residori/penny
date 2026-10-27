@@ -1,0 +1,146 @@
+Visualizzazione
+
+- Visualizzazione delle liste generiche a mo’ di tabella con possibilità di filtrare per contenuto così da ottenere elenchi specifici complessivi.  Questo tipo di visualizzazione va fatto per tutte le voci del menu a sinistra.   Esempio. Anagrafiche clienti: visualizzazione di tutti i clienti con informazioni basilari a vista come ad esempio ragione sociale/nome e cognome, partita iva, indirizzo sede operativa, provincia sede operativa, stato commerciale, stato azienda.  Possibilità nella vista generale di filtrare tutte le aziende in provincia XX oppure tutte le aziende che hanno stato commerciale = “Prospect”.  Questo per consentire una selezione specifica ai fini di controllo, analisi oppure esportazione di dati (in formato Excel). 
+- Visualizzazione anagrafica cliente (interno alla scheda cliente) Rendere più carina la vista dei dati anagrafici magari con box sullo stile della panoramica suddividendo ad esempio dati aziendali, dati commerciali, dati amministrativi.  
+- Visualizzazione software/hardware/formazione/sviluppi Rendere più carina ed intuitiva la vista dei prodotti attraverso un elenco tipo tabella con qualche dettaglio utile già ad una prima vista.  Stile vista “Scadenze” Per vedere i campi restanti consentire una vista dettagliata cliccando sullo specifico prodotto.  Esempio delle colonne nella scheda software:  Tipologia Prodotto - Nome prodotto - Quantità - ID - Release in uso - Tipo licenza - Scadenza  Esempio delle colonne nella scheda hardware: Tipologia Prodotto - Modello - Quantità - S/N - Tipo di vendita - Data di vendita - Scadenza (eventuale) - Scadenza garanzia  Esempio delle colonne nella scheda formazione: Tipo corso - Nome corso - Docente - Periodo corso - Partecipanti -  
+Correzioni
+- Contratti: Eliminare obbligatorietà “nome prodotto” dai contratti.  Tenere come campo obbligatorio “tipologia contratto”
+- Contratti: Eliminare il fatto che se inserisco il prezzo acquisto collaboratore venga fuori l’etichetta “terze parti”. Non è un contratto con terze parti. Eventualmente per gestire questa informazione inserire nell’elenco informazioni di Contratto il campo “Canale” come per gli altri prodotti 
+
+
+Campi di compilazione
+
+
+ANAGRAFICA CLIENTE:
+- Data inserimento automatica all’inserimento
+- Ragione sociale/nome e cognome: compilazione manuale
+- Precedente riferimento (se presente collegamento con azienda sostituita)
+- Stato commerciale (cliente, prospect, collaboratore)
+- Partita iva: compilazione manuale
+- Codice fiscale: compilazione manuale
+- Settore : compilazione manuale
+- Email generica: compilazione manuale
+- Telefono generico: compilazione manuale
+- Indirizzo sede legale: compilazione manuale
+- Sito web: compilazione manuale
+- Note commerciali: compilazione manuale
+- Referente commerciale/acquisti —> selezionabili dai contatti inseriti 
+- Indirizzo PEC: compilazione manuale
+- Codice SDI: compilazione manuale
+- Pagamento predefinito: compilazione manuale
+- Coordinate bancarie 1: compilazione manuale
+- Coordinate bancarie 2: compilazione manuale
+- Insolvente (spunta si/no. In caso sia insolvente viene generato un alert che crea una label grafica con scritto “INSOLVENTE” su tutta la scheda cliente o accanto al suo nome). 
+- Note amministrative: compilazione manuale
+- Referente amministrativo —> selezionabili dai contatti inseriti
+- Stato Azienda: attivo, obsoleto, sostituito, cessata attività —> in caso di sostituito inserire collegamento a nuova azienda di riferimento 
+ CATALOGO PRODOTTI
+Questa parte immagino sia creata per alimentare tutti i prodotti interesse dell’attività aziendale e poterli poi utilizzare per implementare le informazioni su scheda cliente oppure per creare nuove vendite che andranno ad implementare la scheda cliente.  
+I campi dovrebbero essere:  
+- Categoria: a scelta tra Hardware, Software, Formazione, Contratto —> le categorie dovrebbero essere modificabili (ovvero si dovrà poter aggiungere eventuali nuove voci. 
+- Tipologia prodotto: a scelta in base alla categoria (*) —> le tipologie prodotto dovrebbero essere modificabili (ovvero si dovrà poter aggiungere eventuali nuove voci. 
+- Modello: compilazione manuale
+- Origine: a scelta tra “vendita interna” oppure “fornitura esterna
+- Fornitore: a scelta tra “Atree, QS Informatica, Autodesk, 3DConnexion, Altro”
+- Unità di misura: compilazione manuale
+- Descrizione: compilazione manuale
+- Immagine: caricamento facoltativo per eventuale gestione offerta documentale 
+(*)TIPOLOGIA PRODOTTO Possibilità di associare a ciascuna categoria una o più tipologie prodotto per creare sottocategorie di riferimento.  Le tipologie base che si possono già inserire sono queste. Vorrei che potessero essere modificabili e in caso non fossero più vendibili etichettate come “obsolete” che significa che non possono più essere inserite in nuove vendite, ma che rimangono nello storico del cliente e del catalogo.  
+—> Categoria Hardware:
+- Workstation
+- Workstation mobile
+- Monitor
+- Stampanti & Plotter
+- 3DConnexion 
+—> Categoria Software:
+- Autodesk
+- Altri CAD 
+- QS Informatica
+- Office
+- Altros 
+—> Categoria Formazione:
+- Corso standard
+- Corso personalizzato
+- OTC
+- Corso finanziato 
+—> Categoria: Contratto
+- Contratto di Assistenza
+- Pacchetto orario
+- Contratto Spac
+- Contratto Office
+
+
+Le informazioni da registrare sono diverse a seconda della categoria prodotto, per questo ho fatto una distinzione.  
+I campi che contengono informazioni circa la categoria prodotto sono i seguenti: 
+
+CASO SOFTWARE
+- Tipologia prodotto ( a scelta tra opzioni viste sopra)
+- Nome prodotto: compilazione manuale
+- Quantità licenze : compilazione manuale
+- ID/Chiave prodotto: compilazione manuale
+- Release in uso: compilazione manuale
+- Data ultima modifica release in uso: compilazione manuale
+- Release di vendita: compilazione manuale
+- Data di vendita: compilazione manuale
+- Tipo licenza:  Licenze perpetua, licenza mensile, licenza trimestrale, licenza annuale, licenza triennale, token
+- Scadenza licenza (in caso di selezione licenza perpetua il campo rimane inattivo). —> se presente rientra nello Scadenziario
+- Vendita: a scelta tra “vendita nostra” o “fornitura di terzi”
+- Data di vendita: Campo attivo se scelta “vendita nostra” e compilazione manuale a meno che non derivante già da una vendita inserita a CRM
+- Prezzo di vendita: compilazione manuale a meno che non derivante già da una vendita inserita a CRM. Campo attivo se scelta “vendita nostra”
+- Postazione riferimento: compilazione manuale
+- Stato software: a scelta tra “attivo, in scadenza, scaduto, sospeso, annullato, passato ad altro rivenditore, da installare”
+- Note: compilazione manuale
+
+Per uno stesso cliente dovrebbe essere possibile selezionare tutti i prodotti della stessa tipologia e modificare la “release in uso” in modo massivo con un’unica operazione.  Esempio se un cliente ha 10 Autocad e 5 Inventor che rientrano tutti nella tipologia “Autodesk” devo poter selezionare tutte e 15 le licenze per modificare la release in uso da 2026 a 2027 alla data del 25/10/2026. 
+
+CASO HARDWARE
+- Tipologia prodotto (a scelta tra le opzioni viste sopra)
+- Modello : compilazione manuale
+- Serial Number: compilazione manuale
+- Quantità : compilazione manuale
+- Tipo vendita (a scelta tra vendita, noleggio, conto visione)
+- Scadenza (in caso di selezione “vendita” nel tipo vendita il campo rimane inattivo) —> se presente rientra nello Scadenziario
+- Vendita: a scelta tra “vendita nostra” o “fornitura di terzi”
+- Data di vendita: Campo attivo se scelta “vendita nostra” e compilazione manuale a meno che non derivante già da una vendita inserita a CRM
+- Prezzo di vendita: compilazione manuale a meno che non derivante già da una vendita inserita a CRM. Campo attivo se scelta “vendita nostra”
+- Anni di garanzia: inserire numero di anni 
+- Scadenza garanzia: calcola la scadenza in base alla data di vendita + numero di anni inseriti nel campo precedente —> rientra nello Scadenziario
+- Fornitore: compilazione manuale
+- Prezzo di acquisto: compilazione manuale
+- Postazione riferimento: compilazione manuale
+- Configurazione: compilazione manuale
+- Stato hardware: a scelta tra “in uso, obsoleto”
+- Note: compilazione manuale
+
+CASO FORMAZIONE
+- Tipologia prodotto (a scelta tra le opzioni viste sopra)
+- Nome corso: compilazione manuale
+- Sede corso: a scelta tra “online, nostra sede, sede cliente, sede esterna”
+- Periodo formazione: compilazione manuale
+- Docente di riferimento: compilazione manuale —> in futuro sarà possibile scegliere tra utenti interni (che usano il crm) oppure utenti nella rubrica contatti (esempio collaboratori) 
+- Partecipanti (selezionabili da campo contatti oppure inseribili manualmente)
+- Data di vendita: compilazione manuale
+- Prezzo di vendita: compilazione manuale
+- Note: compilazione manuale
+
+CASO CONTRATTI 
+- Tipologia prodotto (a scelta tra le opzioni viste sopra)
+- Tipo contratto: generale, telefonico, solo aggiornamenti, orario
+- Scadenza contratto: compilazione manuale —> rientra nello Scadenziario
+- Stato contratto: a scelta tra attivo, in scadenza, sospeso, sospeso per insolvenza, scaduto, annullato 
+- Numero ore totali: compilazione manuale in caso di tipo contratto = orario)
+- Numero ore residue: compilazione manuale in caso di tipo contratto = orario) --> in futuro questo campo si autoalimenterà gestendo i ticket di assistenza che potranno essere “collegati” a questo tipo di contratto legato ad un sistema di supporto tecnico orario. 
+- Data di vendita
+- Prezzo di vendita
+- Prezzo di acquisto collaboratore (compilazione manuale)
+- Note 
+
+
+
+Visualizzazione e gestione dati 
+- Menu di sinistra: mi aspetto di trovare le liste generiche per categorie principali (clienti, contatti, software, hardware, formazione, contratti, sviluppi) per cui al loro clic nella parte destra dello schermo compare l’elenco complessivo. Visualizzazione dei dati di default in ordine alfabetico ma ordinabile a mio piacimento secondo le colonne principali di visualizzazione.  
+- Spazio di destra dedicato al dettaglio che può essere: visualizzazione massiva a seconda della voce selezionata dal menu di sinistra, quindi elenco di tutti i clienti o di tutti i contatti o software, ecc…, oppure visualizzazione nel dettaglio a seconda della voce selezionata dalla visualizzazione massiva.  
+- Menu disponibilità non capisco a cosa faccia riferimento. Potremmo inserire eventualmente quanto presente nel magazzino interno dell’azienda, in caso di merci c/vendita in sospeso ma verrà gestito diversamente. 
+
+- Visualizzazione: La lista principale su cui ovviamente si fa riferimento 9 volte su 10 è quella dei clienti. Quindi vedi tu se tenerla sempre fissa come colonna “ridotta” ad esempio tra il menu di sinistra e la scheda dettaglio, oppure se tenerla visibile solo al click della voce “clienti”.  Non mi dispiace la vista rapida attualmente presente ma la sposterei a sinistra rispetto a dove è ora. 
+- Nella scheda dettaglio del cliente devo avere la possibilità di vedere tutto il suo parco Contatti, Contratti, Software, Hardware, Formazione, Sviluppi, Attività tecniche, Attività Commerciali.  La visualizzazione deve essere chiara per poter vedere quanto ha in suo possesso, sia che derivi da vendite nostre,  che derivi da vendite pregresse, che derivi da acquisti da terzi fornitori.  Quindi devo avere la possibilità di alimentare queste informazioni anche senza inserire una vendita. 
