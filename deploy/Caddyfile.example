@@ -1,0 +1,10 @@
+# CT 110, reverse proxy 192.168.1.6. Keep both services on separate TLS ports.
+https://grezzano.homepc.it:8443 {
+    header Strict-Transport-Security "max-age=15552000"
+    reverse_proxy 192.168.1.5:80
+}
+
+https://grezzano.homepc.it:9091 {
+    header Strict-Transport-Security "max-age=15552000"
+    reverse_proxy 192.168.0.20:80
+}
