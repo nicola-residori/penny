@@ -21,6 +21,11 @@ public class PasswordGateFilter extends OncePerRequestFilter {
       response.sendError(401,"Account non disponibile");return;
     }
     HttpSession currentSession=request.getSession(false);
+    if(currentSession!=null){
+      Object absolute=currentSession.getAttribute("PENNY_SESSION_EXPIRES_AT");
+      long expires=absolute instanceof Long?(Long)absolute:currentSession.getCreationTime()+java.time.Duration.ofDays(30).toMillis();
+      if(System.currentTimeMillis()>=expires){currentSession.invalidate();SecurityContextHolder.clearContext();response.sendError(401,"Sessione scaduta");return;}
+    }
     Object version=currentSession==null?null:currentSession.getAttribute("PENNY_SESSION_VERSION");
     if(version==null || !(version instanceof Long) || ((Long)version).longValue()!=user.sessionVersion){
       if(currentSession!=null)currentSession.invalidate();

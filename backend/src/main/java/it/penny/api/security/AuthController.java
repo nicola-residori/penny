@@ -35,6 +35,8 @@ public class AuthController {
   request.getSession(true);request.changeSessionId();
   PennyUser loginUser=users.findByEmailIgnoreCase(authentication.getName()).orElseThrow();
   request.getSession().setAttribute("PENNY_SESSION_VERSION",loginUser.sessionVersion);
+  request.getSession().setMaxInactiveInterval(30*24*60*60);
+  request.getSession().setAttribute("PENNY_SESSION_EXPIRES_AT",Instant.now().plus(java.time.Duration.ofDays(30)).toEpochMilli());
   SecurityContext context=SecurityContextHolder.createEmptyContext();
   context.setAuthentication(authentication);
   SecurityContextHolder.setContext(context);

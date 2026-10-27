@@ -1,4 +1,8 @@
 spring:
+  session:
+    timeout: 30d
+    jdbc:
+      initialize-schema: never
   servlet:
     multipart:
       max-file-size: 5MB
@@ -14,6 +18,15 @@ spring:
       ddl-auto: validate
   flyway:
     enabled: true
+server:
+  servlet:
+    session:
+      timeout: 30d
+      cookie:
+        name: PENNY_SESSION
+        max-age: 30d
+        http-only: true
+        same-site: lax
 management:
   endpoints:
     web:

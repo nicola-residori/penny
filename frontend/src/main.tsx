@@ -51,7 +51,7 @@ function useProfile(){
  return {me,setMe,loading};
 }
 function Brand({compact=false}:{compact?:boolean}){
- return <div className={'penny-brand '+(compact?'penny-brand-compact':'')}><img src="/penny-icon.png" alt="Mascotte Penny"/><div><strong>Penny</strong></div><small>Projects · Engagements · Notifications · New Deals · Yearly Commissions</small></div>;
+ return <div className={'penny-brand '+(compact?'penny-brand-compact':'')}><img src="/penny-icon.png" alt="Mascotte Penny"/><div><strong>Penny</strong></div><small className="penny-brand-quote">Projects, Engagements, Notifications, New Deals and Yearly Commissions</small></div>;
 }
 function AuthScreen({onLogin}:{onLogin:(p:Profile)=>void}){
  const [email,setEmail]=useState(''),[password,setPassword]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);

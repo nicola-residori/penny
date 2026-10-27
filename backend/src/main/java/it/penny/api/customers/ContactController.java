@@ -22,7 +22,7 @@ public class ContactController {
  private String email(String value){value=clean(value,254);if(value!=null&&!value.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"))throw bad("Email non valida");return value;}
  public record LinkInput(Long customerId,Long siteId,String role,Boolean isPrimary){}
  public record ContactInput(String fullName,String email,String phone,List<LinkInput> links){}
- private static final String FIELDS="c.id,c.full_name AS \"fullName\",c.email,c.phone,(SELECT count(*) FROM penny_contact_customers cc JOIN penny_customers cu ON cu.id=cc.customer_id WHERE cc.contact_id=c.id AND cu.deleted_at IS NULL) AS \"customerCount\"";
+ private static final String FIELDS="(c.image_data IS NOT NULL) AS \"hasImage\",c.id,c.full_name AS \"fullName\",c.email,c.phone,(SELECT count(*) FROM penny_contact_customers cc JOIN penny_customers cu ON cu.id=cc.customer_id WHERE cc.contact_id=c.id AND cu.deleted_at IS NULL) AS \"customerCount\"";
  private static final String LIVE="c.deleted_at IS NULL AND EXISTS(SELECT 1 FROM penny_contact_customers l JOIN penny_customers cu ON cu.id=l.customer_id WHERE l.contact_id=c.id AND cu.deleted_at IS NULL)";
  private void lock(long id){if(db.queryForList("SELECT c.id FROM penny_customer_contacts c WHERE c.id=? AND "+LIVE+" FOR UPDATE OF c",id).isEmpty())throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Contatto non trovato");}
  private void validateLinks(List<LinkInput> links){
