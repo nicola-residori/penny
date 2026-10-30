@@ -11,7 +11,7 @@ class InstalledBusinessFieldsTest extends InstalledOperationalFieldsTest {
   mvc.perform(get("/api/installed-products/1").principal(admin)).andExpect(jsonPath("$.business.usageRelease").value("2026.1"));
  }
  @Test void rejectsInvalidBusinessAndPerpetualExpiry() throws Exception {
-  mvc.perform(post("/api/installed-products").principal(admin).contentType(APPLICATION_JSON).content(input(",\"business\":{\"softwareStatus\":\"WRONG\"}"))).andExpect(status().isBadRequest());
+  mvc.perform(post("/api/installed-products").principal(admin).contentType(APPLICATION_JSON).content(input(",\"business\":{\"softwareStatus\":123}"))).andExpect(status().isBadRequest());
   mvc.perform(post("/api/installed-products").principal(admin).contentType(APPLICATION_JSON).content(input(",\"licenseExpiresOn\":\"2027-01-01\",\"business\":{\"licenseType\":\"PERPETUAL\"}"))).andExpect(status().isBadRequest());
  }
  @Test void calculatesLeapYearWarrantyAndKeepsExactPrices() throws Exception {
@@ -47,6 +47,9 @@ class InstalledBusinessFieldsTest extends InstalledOperationalFieldsTest {
  }
 
  @Test void serviceAllowsOtherTaxonomyButRejectsContractAndTrainingTypes() throws Exception {
+  // Reset only this fixture after parent setup truncates the referencing products.
+  db.update("DELETE FROM penny_product_types WHERE category_id IN (SELECT id FROM penny_product_categories WHERE code='SERVICE_TEST')");
+  db.update("DELETE FROM penny_product_categories WHERE code='SERVICE_TEST'");
   Long category=db.queryForObject("INSERT INTO penny_product_categories(code,name,operational_kind,legacy_category) VALUES('SERVICE_TEST','Servizi test','OTHER','SERVICE') RETURNING id",Long.class);
   Long other=db.queryForObject("INSERT INTO penny_product_types(category_id,name) VALUES(?,'Altro servizio') RETURNING id",Long.class,category);
   mvc.perform(post("/api/installed-products").principal(admin).contentType(APPLICATION_JSON).content(input(",\"productTypeId\":"+other).replace("SOFTWARE","SERVICE"))).andExpect(status().isOk());
@@ -68,4 +71,10 @@ class InstalledBusinessFieldsTest extends InstalledOperationalFieldsTest {
   mvc.perform(put("/api/installed-products/1").principal(tech).contentType(APPLICATION_JSON).content(input(",\"business\":null"))).andExpect(status().isForbidden());
  }
 
+
+ @Test void catalogWarrantyDefaultsToInstalledHardwareAndCalculatesExpiry() throws Exception {
+  db.update("INSERT INTO penny_catalog_products(id,code,name,category,origin,warranty_years) VALUES(1,'HW-WARRANTY','Computer','HARDWARE','THIRD_PARTY',2)");
+  mvc.perform(post("/api/installed-products").principal(admin).contentType(APPLICATION_JSON).content(input(",\"catalogProductId\":1,\"business\":{\"saleSource\":\"OUR_SALE\",\"soldOn\":\"2024-02-29\"}").replace("SOFTWARE","HARDWARE"))).andExpect(status().isOk());
+  mvc.perform(get("/api/installed-products/1").principal(admin)).andExpect(jsonPath("$.business.warrantyYears").value(2)).andExpect(jsonPath("$.warrantyUntil").value("2026-02-28"));
+ }
 }

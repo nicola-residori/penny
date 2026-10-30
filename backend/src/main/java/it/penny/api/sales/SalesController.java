@@ -10,14 +10,14 @@ import java.util.*;
 @RestController
 @RequestMapping("/api/sales")
 public class SalesController {
- private final M2Support support;private final SalesQueries query;private final it.penny.api.records.CustomerRecordService records;
- public SalesController(M2Support support,it.penny.api.records.CustomerRecordService records){this.support=support;this.records=records;query=new SalesQueries(support);}
+ private final it.penny.api.margins.MarginService margins; private final M2Support support;private final SalesQueries query;private final it.penny.api.records.CustomerRecordService records;
+ public SalesController(M2Support support,it.penny.api.records.CustomerRecordService records,it.penny.api.margins.MarginService margins){this.margins=margins;this.support=support;this.records=records;query=new SalesQueries(support);}
  public record Input(Long customerId,Long catalogProductId,LocalDate soldOn,Integer quantity,BigDecimal unitPrice,String reference,String notes,Boolean registerResource){}
  public record Cancel(String reason){}
  private static final String PRICE_FIELDS=",s.unit_price AS \"unitPrice\",(s.quantity*s.unit_price)::numeric(20,2) AS \"totalAmount\",s.reference,s.notes,s.status,s.cancellation_reason AS \"cancellationReason\",s.created_at AS \"createdAt\"";
  @GetMapping public Map<String,Object> list(@RequestParam(defaultValue="") String q,@RequestParam(required=false) Long customerId,@RequestParam(required=false) LocalDate from,@RequestParam(required=false) LocalDate to,@RequestParam(required=false) String status,@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="20") int size,Authentication auth){
   support.require(auth,"SALES_READ");var p=SalesQueries.params(q,customerId,from,to,page,size);
-  if(status!=null&&!Set.of("CONFIRMED","CANCELLED").contains(status))throw M2Support.bad("Stato vendita non valido");
+  if(status!=null&&!Set.of("DRAFT","CONFIRMED","CANCELLED").contains(status))throw M2Support.bad("Stato vendita non valido");
   p.addValue("status",status);String where=SalesQueries.WHERE+" AND (CAST(:status AS varchar) IS NULL OR s.status=:status)";
   return Map.of("items",M2Support.money(query.named.queryForList("SELECT "+SalesQueries.FIELDS+PRICE_FIELDS+SalesQueries.FROM+where+" ORDER BY s.sold_on DESC,s.id DESC LIMIT :size OFFSET :offset",p)),"total",Objects.requireNonNull(query.named.queryForObject("SELECT count(*)"+SalesQueries.FROM+where,p,Long.class)),"page",page,"size",size);
  }
@@ -31,6 +31,8 @@ public class SalesController {
   if(!Boolean.TRUE.equals(support.db.queryForObject("SELECT c.active AND NOT coalesce(t.obsolete,false) FROM penny_catalog_products p JOIN penny_product_categories c ON c.id=p.category_id LEFT JOIN penny_product_types t ON t.id=p.product_type_id WHERE p.id=?",Boolean.class,input.catalogProductId())))throw M2Support.bad("Categoria o tipologia obsoleta: non vendibile");
   support.db.queryForObject("SELECT set_config('penny.actor',?,true)",String.class,auth.getName());
   Long id=support.db.queryForObject("INSERT INTO penny_sales(customer_id,catalog_product_id,product_code,product_name,origin,category,sold_on,quantity,unit_price,reference,notes) VALUES (?,?,?,?,?,?,?,?,?,?,?) RETURNING id",Long.class,input.customerId(),input.catalogProductId(),product.get("code"),product.get("name"),product.get("origin"),product.get("category"),input.soldOn(),qty,price,M2Support.clean(input.reference(),200),M2Support.clean(input.notes(),10000));
+  Long order=support.db.queryForObject("INSERT INTO penny_sales_orders(customer_id,order_number,sold_on,status,notes) VALUES (?,?,?,'CONFIRMED',?) RETURNING id",Long.class,input.customerId(),input.reference()==null?"LEGACY-"+id:input.reference(),input.soldOn(),input.notes());
+  support.db.update("UPDATE penny_sales SET order_id=? WHERE id=?",order,id);margins.snapshot(id,auth);
   support.audit(auth,"SALE_CREATED","SALE",Objects.requireNonNull(id),Map.of("quantity",qty));
   if(Boolean.TRUE.equals(input.registerResource())){
    String kind=support.db.queryForObject("SELECT operational_kind FROM penny_product_categories WHERE id=?",String.class,product.get("category_id"));long resource;
@@ -53,6 +55,8 @@ public class SalesController {
   if(!"CONFIRMED".equals(sale.get("status")))throw M2Support.conflict("Vendita già annullata");
   if(support.db.queryForObject("SELECT count(*) FROM penny_sale_allocations WHERE sale_id=?",Integer.class,id)>0)throw M2Support.conflict("Libera prima tutte le allocazioni della vendita");
   support.db.update("UPDATE penny_sales SET status='CANCELLED',cancellation_reason=?,cancelled_at=now(),updated_at=now() WHERE id=?",reason,id);
+  margins.cancelSale(id,reason,auth);
+  support.db.update("UPDATE penny_sales_orders SET status='CANCELLED',updated_at=now() WHERE id=? AND NOT EXISTS(SELECT 1 FROM penny_sales WHERE order_id=? AND status<>'CANCELLED')",sale.get("order_id"),sale.get("order_id"));
   support.audit(auth,"SALE_CANCELLED","SALE",id,Map.of("reason",reason));return Map.of("cancelled",true);
  }
  @GetMapping("/summary") public Map<String,Object> summary(@RequestParam(defaultValue="") String q,@RequestParam(required=false) Long customerId,@RequestParam(required=false) LocalDate from,@RequestParam(required=false) LocalDate to,@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="20") int size,Authentication auth){

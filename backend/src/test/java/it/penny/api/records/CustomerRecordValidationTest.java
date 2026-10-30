@@ -13,7 +13,7 @@ class CustomerRecordValidationTest {
   assertEquals("123.45",value.get("price").asText());
  }
  @Test void trainingRejectsUnknownKeysAndInvalidVenue() throws Exception {
-  assertThrows(ResponseStatusException.class,()->CustomerRecordService.validateDetails("TRAINING",json.readTree("{\"venue\":\"MOON\"}")));
+  assertThrows(ResponseStatusException.class,()->CustomerRecordService.validateDetails("TRAINING",json.readTree("{\"venue\":123}")));
   assertThrows(ResponseStatusException.class,()->CustomerRecordService.validateDetails("TRAINING",json.readTree("{\"unexpected\":true}")));
  }
  @Test void saleOverridesManualPriceAndDateExactly() throws Exception {

@@ -48,6 +48,7 @@ public class AuthController {
   PennyUser u=users.findByEmailIgnoreCase(email).orElseThrow();
   return Map.ofEntries(
    Map.entry("email",u.email),Map.entry("name",u.fullName),Map.entry("mustChangePassword",u.mustChangePassword),
+   Map.entry("canReadMargins",!u.mustChangePassword&&rbac.allowed(u.id,"MARGINS_READ")),Map.entry("canWriteMargins",!u.mustChangePassword&&rbac.allowed(u.id,"MARGINS_WRITE")),Map.entry("canReadDocuments",!u.mustChangePassword&&rbac.allowed(u.id,"DOCUMENTS_READ")),Map.entry("canWriteDocuments",!u.mustChangePassword&&rbac.allowed(u.id,"DOCUMENTS_WRITE")),Map.entry("canReadNotifications",!u.mustChangePassword&&rbac.allowed(u.id,"NOTIFICATIONS_READ")),Map.entry("canWriteNotifications",!u.mustChangePassword&&rbac.allowed(u.id,"NOTIFICATIONS_WRITE")),
    Map.entry("canManageData",!u.mustChangePassword&&rbac.allowed(u.id,"DATA_MANAGE")),
    Map.entry("canManageUsers",!u.mustChangePassword&&rbac.allowed(u.id,"USERS_READ")),
    Map.entry("canReadTraining",!u.mustChangePassword&&rbac.allowed(u.id,"TRAINING_READ")),

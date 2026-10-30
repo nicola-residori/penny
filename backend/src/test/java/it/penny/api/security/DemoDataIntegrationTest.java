@@ -48,7 +48,7 @@ class DemoDataIntegrationTest {
  @BeforeEach void setup(){
   mvc=MockMvcBuilders.webAppContextSetup(context).addFilters(security).build();
   db.execute("TRUNCATE penny_users CASCADE");
-  db.execute("TRUNCATE penny_record_participants,penny_customer_records,penny_sale_allocations,penny_sales,penny_installed_products,penny_workstations,penny_contact_customers,penny_customer_contacts,penny_customer_sites,penny_catalog_products,penny_customers,penny_trash_entries,penny_demo_environment,penny_m2_audit RESTART IDENTITY");
+  db.execute("TRUNCATE penny_documents,penny_notifications,penny_record_tasks,penny_record_interventions,penny_contract_renewals,penny_margin_events,penny_margin_snapshots,penny_margin_rule_audit,penny_margin_rules,penny_margin_profiles,penny_sales_orders,penny_record_participants,penny_customer_records,penny_sale_allocations,penny_sales,penny_installed_products,penny_workstations,penny_contact_customers,penny_customer_contacts,penny_customer_sites,penny_catalog_products,penny_customers,penny_trash_entries,penny_demo_environment,penny_m2_audit RESTART IDENTITY");
   email="readme-"+UUID.randomUUID()+"@test.invalid";
   db.update("INSERT INTO penny_users(email,full_name,password_hash,must_change_password) VALUES (?,'README',?,false)",email,encoder.encode(PASSWORD));
   db.update("INSERT INTO penny_user_roles SELECT u.id,r.id FROM penny_users u CROSS JOIN penny_roles r WHERE u.email=? AND r.code='ADMIN'",email);
@@ -95,9 +95,11 @@ class DemoDataIntegrationTest {
   assertEquals(1,db.queryForObject("SELECT count(*) FROM penny_customers",Integer.class));
   mvc.perform(secured(post("/api/admin/data/demo"),csrf()).session(session).contentType(MediaType.APPLICATION_JSON).content("{\"confirm\":true}")).andExpect(status().isOk());
   assertTrue(db.queryForObject("SELECT count(*) FROM penny_installed_products",Integer.class)>0);
+  assertEquals(0,db.queryForObject("SELECT count(*) FROM penny_sales WHERE order_id IS NULL",Integer.class));
+  assertTrue(db.queryForObject("SELECT count(*) FROM penny_sales_orders",Integer.class)>0);
   long maxBefore=db.queryForObject("SELECT max(id) FROM penny_customers",Long.class);
   mvc.perform(secured(post("/api/admin/data/reset"),csrf()).session(session).contentType(MediaType.APPLICATION_JSON).content("{\"confirmation\":\"RESET\"}")).andExpect(status().isOk());
-  for(String table:new String[]{"penny_customers","penny_customer_contacts","penny_contact_customers","penny_customer_sites","penny_catalog_products","penny_sales","penny_sale_allocations","penny_installed_products","penny_workstations","penny_trash_entries","penny_demo_environment"})assertEquals(0,db.queryForObject("SELECT count(*) FROM "+table,Integer.class),table);
+  for(String table:new String[]{"penny_customers","penny_customer_contacts","penny_contact_customers","penny_customer_sites","penny_catalog_products","penny_sales","penny_sale_allocations","penny_installed_products","penny_workstations","penny_trash_entries","penny_demo_environment","penny_sales_orders","penny_documents","penny_notifications","penny_record_tasks","penny_record_interventions","penny_contract_renewals","penny_margin_profiles","penny_margin_rules","penny_margin_snapshots","penny_margin_events","penny_margin_rule_audit"})assertEquals(0,db.queryForObject("SELECT count(*) FROM "+table,Integer.class),table);
   assertEquals(0,db.queryForObject("SELECT count(*) FROM penny_customers",Integer.class));
   assertEquals(users,db.queryForObject("SELECT count(*) FROM penny_users",Integer.class));
   assertEquals(roles,db.queryForObject("SELECT count(*) FROM penny_roles",Integer.class));

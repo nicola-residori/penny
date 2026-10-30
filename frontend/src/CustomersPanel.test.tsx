@@ -42,11 +42,11 @@ it('does not discard an open form when the already selected filter is pressed',a
  await user.click(screen.getByRole('button',{name:'Attivi'}));
  expect((screen.getByLabelText('Nome / Ragione sociale *') as HTMLInputElement).value).toBe('Nuova azienda');
 });
-it('explains automatic conversion and does not offer manual commercial status controls',async()=>{
+it('allows manual commercial status while explaining automatic first-sale conversion',async()=>{
  vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>({items:[],total:0})})));
  render(<CustomersPanel canWrite/>);await userEvent.click(screen.getByRole('button',{name:'+ Nuovo cliente'}));
- expect(screen.getByText('Il prospect diventa cliente automaticamente alla prima vendita.')).toBeTruthy();
- expect(screen.queryByLabelText('Stato commerciale')).toBeNull();
+ expect(screen.getByText(/Il prospect diventa cliente automaticamente alla prima vendita;/)).toBeTruthy();
+ expect(screen.getByRole('combobox',{name:/Stato commerciale/})).toHaveProperty('value','PROSPECT');
  expect(screen.queryByRole('button',{name:'Diventa cliente'})).toBeNull();
 });
 it('shows Prospect as a read-only badge without a manual conversion button',async()=>{
@@ -65,8 +65,8 @@ it('distinguishes clients and prospects with explicit list badges, not only colo
 it('shows commercial, administrative and corporate business fields for new customers',async()=>{
  vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>({items:[],total:0})})));
  render(<CustomersPanel canWrite/>);await userEvent.click(screen.getByRole('button',{name:'+ Nuovo cliente'}));
- for(const label of ['Settore','Sito web','Indirizzo PEC','Codice SDI','Pagamento predefinito','Coordinate bancarie 1','Coordinate bancarie 2','Note amministrative','Referente amministrativo','Referente commerciale / acquisti','Collaboratore','Insolvente'])expect(screen.getByLabelText(label)).toBeTruthy();
+ for(const label of ['Settore','Sito web','Indirizzo PEC','Codice SDI','Pagamento predefinito','Coordinate bancarie 1','Coordinate bancarie 2','Note amministrative','Referente amministrativo','Referente commerciale / acquisti','Collaboratore','Insolvente'])expect(screen.getAllByLabelText(label).some(element=>element.closest('.customers-detail form'))).toBe(true);
  expect((screen.getByLabelText('Data inserimento') as HTMLInputElement).readOnly).toBe(true);
- await userEvent.selectOptions(screen.getByLabelText('Stato azienda'),'REPLACED');
+ await userEvent.selectOptions(screen.getByLabelText('Stato azienda',{selector:'select'}),'REPLACED');
  expect((screen.getByLabelText('Nuova azienda di riferimento') as HTMLSelectElement).required).toBe(true);
 });

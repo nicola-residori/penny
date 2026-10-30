@@ -7,6 +7,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 class ProductTaxonomyIntegrationTest extends ProductCatalogIntegrationTest {
  @Test void createsCustomCategoryTypeAndPreservesLegacyFields() throws Exception {
+  // The schema survives remote reruns; parent setup already removes every product.
+  db.update("DELETE FROM penny_product_types WHERE category_id IN (SELECT id FROM penny_product_categories WHERE name='Ricambi')");
+  db.update("DELETE FROM penny_product_categories WHERE name='Ricambi'");
   mvc.perform(get("/api/product-categories").principal(admin)).andExpect(status().isOk()).andExpect(jsonPath("$.items[?(@.code=='CONTRACT')].name").value("Contratto"));
   long category=new com.fasterxml.jackson.databind.ObjectMapper().readTree(mvc.perform(post("/api/product-categories").principal(admin).contentType(APPLICATION_JSON).content("{\"name\":\"Ricambi\",\"operationalKind\":\"HARDWARE\",\"active\":true}")).andExpect(status().isOk()).andReturn().getResponse().getContentAsString()).get("id").asLong();
   long type=new com.fasterxml.jackson.databind.ObjectMapper().readTree(mvc.perform(post("/api/product-types").principal(admin).contentType(APPLICATION_JSON).content("{\"categoryId\":"+category+",\"name\":\"Kit ricambio\",\"obsolete\":false}")).andExpect(status().isOk()).andReturn().getResponse().getContentAsString()).get("id").asLong();

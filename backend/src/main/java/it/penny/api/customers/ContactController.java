@@ -21,8 +21,23 @@ public class ContactController {
  private String name(String value){value=clean(value,200);if(value==null)throw bad("Nome obbligatorio");return value;}
  private String email(String value){value=clean(value,254);if(value!=null&&!value.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"))throw bad("Email non valida");return value;}
  public record LinkInput(Long customerId,Long siteId,String role,Boolean isPrimary){}
- public record ContactInput(String fullName,String email,String phone,List<LinkInput> links){}
- private static final String FIELDS="(c.image_data IS NOT NULL) AS \"hasImage\",c.id,c.full_name AS \"fullName\",c.email,c.phone,(SELECT count(*) FROM penny_contact_customers cc JOIN penny_customers cu ON cu.id=cc.customer_id WHERE cc.contact_id=c.id AND cu.deleted_at IS NULL) AS \"customerCount\"";
+ public record ContactInput(String fullName,String email,String phone,List<LinkInput> links,com.fasterxml.jackson.databind.JsonNode firstName,com.fasterxml.jackson.databind.JsonNode lastName,com.fasterxml.jackson.databind.JsonNode companyMobile,com.fasterxml.jackson.databind.JsonNode personalMobile,com.fasterxml.jackson.databind.JsonNode contactStatus,com.fasterxml.jackson.databind.JsonNode contactReference){
+  public ContactInput(String fullName,String email,String phone,List<LinkInput> links){this(fullName,email,phone,links,null,null,null,null,null,null);}
+ }
+ static final String EXTRA_FIELDS="c.first_name AS \"firstName\",c.last_name AS \"lastName\",c.company_mobile AS \"companyMobile\",c.personal_mobile AS \"personalMobile\",c.contact_status AS \"contactStatus\",c.contact_reference AS \"contactReference\",";
+ private String contactName(ContactInput input){
+  if(input.fullName()!=null&&!input.fullName().isBlank())return name(input.fullName());
+  String first=input.firstName()!=null&&input.firstName().isTextual()?input.firstName().textValue():"";
+  String last=input.lastName()!=null&&input.lastName().isTextual()?input.lastName().textValue():"";
+  return name((first+" "+last).trim());
+ }
+ private void saveDetails(long id,ContactInput input){
+  var values=new LinkedHashMap<String,com.fasterxml.jackson.databind.JsonNode>();values.put("first_name",input.firstName());values.put("last_name",input.lastName());values.put("company_mobile",input.companyMobile());values.put("personal_mobile",input.personalMobile());values.put("contact_status",input.contactStatus());values.put("contact_reference",input.contactReference());
+  for(var entry:values.entrySet()){var node=entry.getValue();if(node==null)continue;if(!node.isNull()&&!node.isTextual())throw bad("Campo contatto non valido");String value=node.isNull()?null:clean(node.textValue(),entry.getKey().contains("mobile")?40:entry.getKey().startsWith("contact_")?120:200);if(entry.getKey().equals("contact_status")&&value==null)value="ACTIVE";db.update("UPDATE penny_customer_contacts SET "+entry.getKey()+"=? WHERE id=?",value,id);}
+  if(input.firstName()!=null||input.lastName()!=null){String structured=db.queryForObject("SELECT trim(concat_ws(' ',first_name,last_name)) FROM penny_customer_contacts WHERE id=?",String.class,id);if(structured!=null&&structured.length()>200)throw bad("Nome e cognome troppo lunghi");db.update("UPDATE penny_customer_contacts SET full_name=coalesce(nullif(trim(concat_ws(' ',first_name,last_name)),''),full_name) WHERE id=?",id);}
+ }
+
+ private static final String FIELDS=EXTRA_FIELDS+"(c.image_data IS NOT NULL) AS \"hasImage\",c.id,c.full_name AS \"fullName\",c.email,c.phone,(SELECT count(*) FROM penny_contact_customers cc JOIN penny_customers cu ON cu.id=cc.customer_id WHERE cc.contact_id=c.id AND cu.deleted_at IS NULL) AS \"customerCount\"";
  private static final String LIVE="c.deleted_at IS NULL AND EXISTS(SELECT 1 FROM penny_contact_customers l JOIN penny_customers cu ON cu.id=l.customer_id WHERE l.contact_id=c.id AND cu.deleted_at IS NULL)";
  private void lock(long id){if(db.queryForList("SELECT c.id FROM penny_customer_contacts c WHERE c.id=? AND "+LIVE+" FOR UPDATE OF c",id).isEmpty())throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Contatto non trovato");}
  private void validateLinks(List<LinkInput> links){
@@ -49,18 +64,18 @@ public class ContactController {
  private List<Map<String,Object>> links(long id){var rows=db.queryForList("SELECT l.customer_id AS \"customerId\",cu.name AS \"customerName\",cu.lifecycle_status AS \"lifecycleStatus\",l.site_id AS \"siteId\",s.name AS \"siteName\",coalesce(s.site_types,'[]'::jsonb)::text AS \"siteTypes\",cu.archived,l.role,l.is_primary AS \"isPrimary\" FROM penny_contact_customers l JOIN penny_customers cu ON cu.id=l.customer_id LEFT JOIN penny_customer_sites s ON s.id=l.site_id WHERE l.contact_id=? AND cu.deleted_at IS NULL ORDER BY cu.name,cu.id",id);for(var row:rows){try{row.put("siteTypes",json.readValue((String)row.get("siteTypes"),json.getTypeFactory().constructCollectionType(List.class,String.class)));}catch(com.fasterxml.jackson.core.JsonProcessingException e){throw new IllegalStateException("Invalid stored site types",e);}}return rows;}
  @GetMapping("/{id}") public Map<String,Object> get(@PathVariable long id,Authentication auth){require(auth,"CUSTOMERS_READ");var rows=db.queryForList("SELECT "+FIELDS+" FROM penny_customer_contacts c WHERE c.id=? AND "+LIVE,id);if(rows.isEmpty())throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Contatto non trovato");var result=rows.getFirst();result.put("links",links(id));return result;}
  @PostMapping @Transactional public Map<String,Object> create(@RequestBody ContactInput input,Authentication auth){
-  require(auth,"CUSTOMERS_WRITE");String name=name(input.fullName()),mail=email(input.email()),phone=clean(input.phone(),40);validateLinks(input.links());var first=input.links().getFirst();
+  require(auth,"CUSTOMERS_WRITE");String name=contactName(input),mail=email(input.email()),phone=clean(input.phone(),40);validateLinks(input.links());var first=input.links().getFirst();
   long id=Objects.requireNonNull(db.queryForObject("INSERT INTO penny_customer_contacts(customer_id,full_name,email,phone) VALUES (?,?,?,?) RETURNING id",Long.class,first.customerId(),name,mail,phone));
-  for(var link:input.links())saveLink(id,link);return Map.of("id",id);
+  for(var link:input.links())saveLink(id,link);saveDetails(id,input);return Map.of("id",id);
  }
  @PutMapping("/{id}") @Transactional public Map<String,Object> update(@PathVariable long id,@RequestBody ContactInput input,Authentication auth){
-  require(auth,"CUSTOMERS_WRITE");lock(id);String name=name(input.fullName()),mail=email(input.email()),phone=clean(input.phone(),40);validateLinks(input.links());
+  require(auth,"CUSTOMERS_WRITE");lock(id);String name=contactName(input),mail=email(input.email()),phone=clean(input.phone(),40);validateLinks(input.links());
   var retained=input.links().stream().map(LinkInput::customerId).toList();
   for(var ref:db.queryForList("SELECT id FROM penny_customers WHERE commercial_contact_id=? OR administrative_contact_id=?",id,id))if(!retained.contains(((Number)ref.get("id")).longValue()))throw new ResponseStatusException(HttpStatus.CONFLICT,"Rimuovere prima il contatto dai referenti commerciali o amministrativi");
   // Preserve relationships to trashed customers: they are deliberately hidden from the editor until restored.
   db.update("DELETE FROM penny_contact_customers l USING penny_customers cu WHERE l.customer_id=cu.id AND cu.deleted_at IS NULL AND l.contact_id=?",id);
   for(var link:input.links())saveLink(id,link);
-  db.update("UPDATE penny_customer_contacts SET customer_id=?,full_name=?,email=?,phone=? WHERE id=?",input.links().getFirst().customerId(),name,mail,phone,id);return Map.of("updated",true);
+  db.update("UPDATE penny_customer_contacts SET customer_id=?,full_name=?,email=?,phone=? WHERE id=?",input.links().getFirst().customerId(),name,mail,phone,id);saveDetails(id,input);return Map.of("updated",true);
  }
  @PutMapping("/{id}/customers/{customerId}") @Transactional public Map<String,Object> link(@PathVariable long id,@PathVariable long customerId,@RequestBody LinkInput input,Authentication auth){require(auth,"CUSTOMERS_WRITE");lock(id);var link=new LinkInput(customerId,input.siteId(),input.role(),input.isPrimary());validateLink(link);saveLink(id,link);return Map.of("updated",true);}
  @DeleteMapping("/{id}/customers/{customerId}") @Transactional public Map<String,Object> unlink(@PathVariable long id,@PathVariable long customerId,Authentication auth){require(auth,"CUSTOMERS_WRITE");return unlinkContact(id,customerId);}

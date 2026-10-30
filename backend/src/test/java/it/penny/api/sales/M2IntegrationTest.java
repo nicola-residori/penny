@@ -42,10 +42,70 @@ class M2IntegrationTest {
   db.update("INSERT INTO penny_customers(id,kind,name,lifecycle_status) VALUES (1,'COMPANY','Alpha','CUSTOMER'),(2,'COMPANY','Beta','CUSTOMER')");
   db.update("INSERT INTO penny_catalog_products(id,code,name,origin,category) VALUES (1,'PEN-01','Penny Suite','INTERNAL','SOFTWARE'),(2,'EXT-01','Hardware','THIRD_PARTY','HARDWARE')");
   db.update("INSERT INTO penny_installed_products(id,customer_id,category,name,origin,catalog_product_id) VALUES (1,1,'SOFTWARE','Ufficio Alpha','INTERNAL',1),(2,1,'SOFTWARE','Altro Alpha','INTERNAL',1),(3,2,'SOFTWARE','Beta','INTERNAL',1),(4,1,'HARDWARE','Monitor','THIRD_PARTY',2)");
+  db.queryForObject("SELECT setval(pg_get_serial_sequence('penny_installed_products','id'),(SELECT max(id) FROM penny_installed_products))",Long.class);
  }
  String sale(int quantity,String price){return "{\"customerId\":1,\"catalogProductId\":1,\"soldOn\":\"2026-10-25\",\"quantity\":"+quantity+",\"unitPrice\":"+price+",\"reference\":\"ORD-1\"}";}
  long createSale(int quantity) throws Exception {var r=mvc.perform(post("/api/sales").principal(admin).contentType(APPLICATION_JSON).content(sale(quantity,"12.50"))).andExpect(status().isOk()).andReturn();return json.readTree(r.getResponse().getContentAsString()).get("id").asLong();}
  long allocate(long sale,long installed,int quantity) throws Exception {var r=mvc.perform(post("/api/allocations").principal(tech).contentType(APPLICATION_JSON).content("{\"saleId\":"+sale+",\"installedProductId\":"+installed+",\"quantity\":"+quantity+"}")).andExpect(status().isOk()).andReturn();return json.readTree(r.getResponse().getContentAsString()).get("id").asLong();}
+ @Test void orderSearchHonorsCustomerPeriodStatusAndPagination()throws Exception{
+  db.update("INSERT INTO penny_sales_orders(customer_id,order_number,sold_on,status) VALUES (1,'FILTER-A','2026-10-01','DRAFT'),(2,'FILTER-B','2026-10-02','CONFIRMED'),(1,'FILTER-C','2026-10-03','CONFIRMED')");
+  mvc.perform(get("/api/sales-orders").principal(admin).param("q","FILTER").param("customerId","1").param("from","2026-10-02").param("to","2026-10-31").param("status","CONFIRMED").param("size","1")).andExpect(status().isOk()).andExpect(jsonPath("$.total").value(1)).andExpect(jsonPath("$.items[0].orderNumber").value("FILTER-C"));
+  mvc.perform(get("/api/sales-orders").principal(admin).param("q","FILTER").param("page","1").param("size","1")).andExpect(status().isOk()).andExpect(jsonPath("$.total").value(3)).andExpect(jsonPath("$.items[0].orderNumber").value("FILTER-B"));
+  mvc.perform(get("/api/sales-orders").principal(admin).param("status","UNKNOWN")).andExpect(status().isBadRequest());
+ }
+ @Test void mixedOrderConfirmationIsIdempotentAndKeepsExactLineReferences() throws Exception {
+  String body="""
+   {"customerId":1,"orderNumber":"123/26","soldOn":"2026-10-29","lines":[
+    {"catalogProductId":2,"quantity":3,"unitPrice":"3200.00","business":{"operationType":"RENTAL","durationMonths":12,"warrantyMonths":12}},
+    {"catalogProductId":1,"quantity":1,"unitPrice":"2930.00","business":{"licenseType":"ANNUAL","operationType":"NEW_LICENSE","durationMonths":12,"soldRelease":"R1"}}
+   ]}
+   """;
+  var response=mvc.perform(post("/api/sales-orders").principal(admin).contentType(APPLICATION_JSON).content(body)).andExpect(status().isOk()).andReturn();
+  long order=json.readTree(response.getResponse().getContentAsString()).path("id").asLong();
+  assertEquals(2,db.queryForObject("SELECT count(*) FROM penny_sales WHERE order_id=? AND status='DRAFT'",Integer.class,order));
+  assertEquals(0,db.queryForObject("SELECT count(*) FROM penny_installed_products WHERE sale_id IS NOT NULL",Integer.class));
+  mvc.perform(post("/api/sales-orders/"+order+"/confirm").principal(admin)).andExpect(status().isOk());
+  mvc.perform(post("/api/sales-orders/"+order+"/confirm").principal(admin)).andExpect(status().isOk());
+  assertEquals(4,db.queryForObject("SELECT count(*) FROM penny_installed_products WHERE sale_id IN (SELECT id FROM penny_sales WHERE order_id=?)",Integer.class,order));
+  assertEquals(4,db.queryForObject("SELECT count(*) FROM penny_sale_allocations a JOIN penny_sales s ON s.id=a.sale_id WHERE s.order_id=?",Integer.class,order));
+  long line=db.queryForObject("SELECT id FROM penny_sales WHERE order_id=? AND catalog_product_id=1",Long.class,order);
+  assertFalse(json.readTree(db.queryForObject("SELECT business::text FROM penny_sales WHERE id=?",String.class,line)).has("expiresOn"));
+  mvc.perform(put("/api/sales-orders/"+order+"/lines/"+line+"/operations").principal(admin).contentType(APPLICATION_JSON).content("{\"licenseId\":\"KEY-123\",\"effectiveFrom\":\"2026-11-15\"}")).andExpect(status().isOk());
+  var business=json.readTree(db.queryForObject("SELECT business::text FROM penny_sales WHERE id=?",String.class,line));
+  assertEquals("KEY-123",db.queryForObject("SELECT license_key FROM penny_installed_products WHERE sale_id=?",String.class,line));assertEquals("KEY-123",business.path("licenseId").asText());assertEquals("2027-11-15",business.path("expiresOn").asText());
+  assertEquals("NEW_LICENSE",business.path("operationType").asText());
+  var installed=json.readTree(db.queryForObject("SELECT business::text FROM penny_installed_products WHERE sale_id=?",String.class,line));
+  assertEquals("ANNUAL",installed.path("licenseType").asText());assertEquals("NEW_LICENSE",installed.path("softwareSaleType").asText());assertEquals("R1",installed.path("soldRelease").asText());assertFalse(installed.has("operationalKind"));assertFalse(installed.has("expiresOn"));
+  assertEquals(java.time.LocalDate.of(2027,11,15),db.queryForObject("SELECT license_expires_on FROM penny_installed_products WHERE sale_id=?",java.time.LocalDate.class,line));
+  mvc.perform(post("/api/sales-orders/"+order+"/confirm").principal(admin)).andExpect(status().isOk());
+  assertEquals("KEY-123",db.queryForObject("SELECT license_key FROM penny_installed_products WHERE sale_id=?",String.class,line));
+ }
+ @Test void orderContractDateUpdatesKeepCorrectionHistoryOnlyWhenDatesChange() throws Exception {
+  db.update("INSERT INTO penny_catalog_products(id,code,name,origin,category,category_id,product_type_id) SELECT 3,'SUPPORT','Supporto','THIRD_PARTY','SERVICE',c.id,(SELECT min(id) FROM penny_product_types WHERE category_id=c.id) FROM penny_product_categories c WHERE c.code='CONTRACT'");
+  String body="""
+   {"customerId":1,"orderNumber":"SUP-26","soldOn":"2026-10-29","lines":[{"catalogProductId":3,"quantity":1,"unitPrice":"100","business":{"durationMonths":12}}]}
+   """;
+  var response=mvc.perform(post("/api/sales-orders").principal(admin).contentType(APPLICATION_JSON).content(body)).andExpect(status().isOk()).andReturn();
+  long order=json.readTree(response.getResponse().getContentAsString()).path("id").asLong();
+  mvc.perform(post("/api/sales-orders/"+order+"/confirm").principal(admin)).andExpect(status().isOk());
+  long line=db.queryForObject("SELECT id FROM penny_sales WHERE order_id=?",Long.class,order);
+  long record=db.queryForObject("SELECT id FROM penny_customer_records WHERE sale_id=?",Long.class,line);
+  String path="/api/sales-orders/"+order+"/lines/"+line+"/operations";
+  mvc.perform(put(path).principal(admin).contentType(APPLICATION_JSON).content("{\"effectiveFrom\":\"2026-11-15\"}")).andExpect(status().isOk());
+  mvc.perform(put(path).principal(admin).contentType(APPLICATION_JSON).content("{\"effectiveFrom\":\"2026-11-15\"}")).andExpect(status().isOk());
+  assertEquals(1,db.queryForObject("SELECT count(*) FROM penny_contract_renewals WHERE record_id=?",Integer.class,record));
+  mvc.perform(put(path).principal(admin).contentType(APPLICATION_JSON).content("{\"effectiveFrom\":\"2026-12-01\"}")).andExpect(status().isOk());
+  var events=db.queryForList("SELECT * FROM penny_contract_renewals WHERE record_id=? ORDER BY id",record);
+  assertEquals(2,events.size());assertEquals("CORRECTION",events.get(1).get("event_type"));assertEquals(admin.getName(),events.get(1).get("actor"));assertEquals("Aggiornamento date dalla riga ordine",events.get(1).get("reason"));
+  assertEquals("2026-11-15",events.get(1).get("previous_start").toString());assertEquals("2027-11-15",events.get(1).get("previous_end").toString());assertEquals("2026-12-01",events.get(1).get("new_start").toString());assertEquals("2027-12-01",events.get(1).get("new_end").toString());
+ }
+ @Test void legacySaleRetainsLedgerIdAndGetsSingleOrderHeader() throws Exception {
+  long line=createSale(2);assertEquals(1,db.queryForObject("SELECT count(*) FROM penny_sales s JOIN penny_sales_orders o ON o.id=s.order_id AND o.customer_id=s.customer_id WHERE s.id=? AND o.status='CONFIRMED'",Integer.class,line));
+ }
+ @Test void orderFinancialDataRequiresSalesRead() throws Exception {
+  mvc.perform(get("/api/sales-orders").principal(tech)).andExpect(status().isForbidden());
+  mvc.perform(post("/api/sales-orders").principal(tech).contentType(APPLICATION_JSON).content("{}")).andExpect(status().isForbidden());
+ }
  @Test void salesHistorySummaryAndCancellation() throws Exception {
   long id=createSale(10);createSale(2);
   mvc.perform(get("/api/sales/summary").principal(admin)).andExpect(jsonPath("$.totals.soldQuantity").value(12)).andExpect(jsonPath("$.totals.totalAmount").value("150.00")).andExpect(jsonPath("$.items[0].customerName").value("Alpha"));

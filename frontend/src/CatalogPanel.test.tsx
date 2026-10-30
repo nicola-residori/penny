@@ -40,8 +40,8 @@ it('edits optional supplier and EUR price and offers training',async()=>{
  expect(screen.getByText('125,50 €')).toBeTruthy();expect(screen.getAllByText('Distributore').length).toBeGreaterThan(0);
  await user.click(screen.getByRole('button',{name:'Modifica'}));
  expect(screen.getByLabelText('Altro fornitore')).toHaveProperty('value','Distributore');
- await user.selectOptions(screen.getByLabelText('Categoria'),'TRAINING');
- await user.clear(screen.getByLabelText('Prezzo (EUR)'));await user.selectOptions(screen.getByLabelText('Fornitore'),'');
+ await user.selectOptions(screen.getByLabelText('Categoria',{selector:'select'}),'TRAINING');
+ await user.clear(screen.getByLabelText('Prezzo (EUR)'));await user.selectOptions(screen.getByLabelText('Fornitore',{selector:'select'}),'');
  await user.click(screen.getByRole('button',{name:'Salva'}));
  await waitFor(()=>expect(writes).toContainEqual(expect.objectContaining({category:'TRAINING',supplier:null,price:null})));
  expect(screen.queryByText('Prodotto nostro')).toBeNull();
@@ -49,10 +49,10 @@ it('edits optional supplier and EUR price and offers training',async()=>{
 it('saves taxonomy, unit and sales channel with the exact decimal price string',async()=>{
  const writes:Record<string,unknown>[]=[];
  vi.stubGlobal('fetch',vi.fn(async(url:string,o?:RequestInit)=>{if(o?.method==='POST'&&url==='/api/catalog-products')writes.push(JSON.parse(String(o.body)));return {ok:true,json:async()=>url.includes('/csrf')?{token:'x'}:url.startsWith('/api/product-categories')?{items:[{id:2,name:'Software',legacyCategory:'SOFTWARE',operationalKind:'SOFTWARE',active:true}]}:url.startsWith('/api/product-types')?{items:[{id:3,categoryId:2,name:'Autodesk',obsolete:false}]}:o?.method==='POST'?{id:8}:{items:[],total:0}};}));
- render(<CatalogPanel canWrite/>);const user=userEvent.setup();await user.click(screen.getByRole('button',{name:'+ Nuovo prodotto'}));await user.type(screen.getByLabelText('Codice *'),'SW');await user.type(screen.getByLabelText('Nome *'),'Licenza');await screen.findByRole('option',{name:'Software'});await user.selectOptions(screen.getByLabelText('Categoria'),'2');await user.selectOptions(screen.getByLabelText('Tipologia prodotto'),'3');await user.selectOptions(screen.getByLabelText('Canale di vendita'),'EXTERNAL_SUPPLY');await user.type(screen.getByLabelText('Unità di misura'),'licenza');await user.type(screen.getByLabelText('Prezzo (EUR)'),'123456789.99');await user.click(screen.getByRole('button',{name:'Salva'}));await waitFor(()=>expect(writes).toContainEqual(expect.objectContaining({categoryId:2,productTypeId:3,unit:'licenza',supplyChannel:'EXTERNAL_SUPPLY',price:'123456789.99',origin:'INTERNAL'})));
+ render(<CatalogPanel canWrite/>);const user=userEvent.setup();await user.click(screen.getByRole('button',{name:'+ Nuovo prodotto'}));await user.type(screen.getByLabelText('Codice *'),'SW');await user.type(screen.getByLabelText('Nome *'),'Licenza');await screen.findByRole('option',{name:'Software'});await user.selectOptions(screen.getByLabelText('Categoria',{selector:'select'}),'2');await user.selectOptions(screen.getByLabelText('Tipologia prodotto',{selector:'select'}),'3');await user.selectOptions(screen.getByLabelText('Canale di vendita',{selector:'select'}),'EXTERNAL_SUPPLY');await user.type(screen.getByLabelText('Unità di misura'),'licenza');await user.type(screen.getByLabelText('Prezzo (EUR)'),'123456789.99');await user.click(screen.getByRole('button',{name:'Salva'}));await waitFor(()=>expect(writes).toContainEqual(expect.objectContaining({categoryId:2,productTypeId:3,unit:'licenza',supplyChannel:'EXTERNAL_SUPPLY',price:'123456789.99',origin:'INTERNAL'})));
 });
 
 it('uses sales channel without exposing the legacy origin in the catalog',async()=>{
  vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>({items:[item],total:1})})));
- render(<CatalogPanel canWrite/>);await userEvent.click(await screen.findByRole('button',{name:/PEN-01/}));expect(screen.queryByText('Origine')).toBeNull();expect(screen.queryByLabelText('Filtra origine')).toBeNull();await userEvent.click(screen.getByRole('button',{name:'Modifica'}));expect(screen.queryByLabelText('Origine')).toBeNull();expect(screen.getByLabelText('Canale di vendita')).toBeTruthy();
+ render(<CatalogPanel canWrite/>);await userEvent.click(await screen.findByRole('button',{name:/PEN-01/}));expect(screen.queryByText('Origine')).toBeNull();expect(screen.queryByLabelText('Filtra origine')).toBeNull();await userEvent.click(screen.getByRole('button',{name:'Modifica'}));expect(screen.queryByLabelText('Origine')).toBeNull();expect(screen.getByLabelText('Canale di vendita',{selector:'select'})).toBeTruthy();
 });

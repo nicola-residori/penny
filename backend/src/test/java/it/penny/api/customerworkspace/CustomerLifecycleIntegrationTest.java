@@ -20,7 +20,7 @@ class CustomerLifecycleIntegrationTest {
  @DynamicPropertySource static void config(DynamicPropertyRegistry p){p.add("spring.datasource.url",()->System.getenv("PENNY_TEST_JDBC_URL")+"?currentSchema=customer_lifecycle");p.add("spring.datasource.username",()->System.getenv("PENNY_TEST_DB_USER"));p.add("spring.datasource.password",()->System.getenv("PENNY_TEST_DB_PASSWORD"));p.add("spring.flyway.schemas",()->"customer_lifecycle");}
  @Autowired JdbcTemplate db;@Autowired WebApplicationContext context;MockMvc mvc;
  final UsernamePasswordAuthenticationToken admin=new UsernamePasswordAuthenticationToken("lifecycle@test.invalid","unused");
- @BeforeEach void setup(){mvc=MockMvcBuilders.webAppContextSetup(context).build();db.execute("TRUNCATE penny_customers,penny_catalog_products,penny_users,penny_m2_audit RESTART IDENTITY CASCADE");db.update("INSERT INTO penny_users(email,full_name,password_hash,must_change_password) VALUES (?,'Lifecycle','unused',false)",admin.getName());db.update("INSERT INTO penny_user_roles SELECT u.id,r.id FROM penny_users u CROSS JOIN penny_roles r WHERE u.email=? AND r.code='ADMIN'",admin.getName());db.update("INSERT INTO penny_customers(id,kind,name,lifecycle_status) VALUES (10,'COMPANY','Cliente esistente','CUSTOMER')");}
+ @BeforeEach void setup(){mvc=MockMvcBuilders.webAppContextSetup(context).build();db.execute("TRUNCATE penny_customers,penny_catalog_products,penny_users,penny_m2_audit,penny_trash_entries RESTART IDENTITY CASCADE");db.update("INSERT INTO penny_users(email,full_name,password_hash,must_change_password) VALUES (?,'Lifecycle','unused',false)",admin.getName());db.update("INSERT INTO penny_user_roles SELECT u.id,r.id FROM penny_users u CROSS JOIN penny_roles r WHERE u.email=? AND r.code='ADMIN'",admin.getName());db.update("INSERT INTO penny_customers(id,kind,name,lifecycle_status) VALUES (10,'COMPANY','Cliente esistente','CUSTOMER')");}
  @Test void firstSaleConvertsAutomaticallyOnceAndFailedSalesDoNot() throws Exception {
   mvc.perform(post("/api/customers").principal(admin).contentType(APPLICATION_JSON).content("{\"kind\":\"COMPANY\",\"name\":\"Prospect nuovo\"}")).andExpect(status().isOk());
   long id=db.queryForObject("SELECT id FROM penny_customers WHERE name='Prospect nuovo'",Long.class);
@@ -41,13 +41,20 @@ class CustomerLifecycleIntegrationTest {
   assertEquals("CUSTOMER",db.queryForObject("SELECT lifecycle_status FROM penny_customers WHERE id=?",String.class,id));
   mvc.perform(get("/api/customers").param("lifecycleStatus","CUSTOMER").principal(admin)).andExpect(jsonPath("$.total").value(2));
  }
- @Test void commercialStatusCannotBeSetManuallyAndSalesPermissionsAreRequired() throws Exception {
-  mvc.perform(post("/api/customers").principal(admin).contentType(APPLICATION_JSON).content("{\"kind\":\"COMPANY\",\"name\":\"Manuale\",\"lifecycleStatus\":\"CUSTOMER\"}")).andExpect(status().isBadRequest());
-  mvc.perform(put("/api/customers/10").principal(admin).contentType(APPLICATION_JSON).content("{\"kind\":\"COMPANY\",\"name\":\"Cliente\",\"lifecycleStatus\":\"PROSPECT\"}")).andExpect(status().isBadRequest());
+ @Test void commercialStatusCanBeSetManuallyButSalesPermissionsAreStillRequired() throws Exception {
+  mvc.perform(post("/api/customers").principal(admin).contentType(APPLICATION_JSON).content("{\"kind\":\"COMPANY\",\"name\":\"Manuale\",\"lifecycleStatus\":\"CUSTOMER\"}")).andExpect(status().isOk());
+  mvc.perform(put("/api/customers/10").principal(admin).contentType(APPLICATION_JSON).content("{\"kind\":\"COMPANY\",\"name\":\"Cliente\",\"lifecycleStatus\":\"PROSPECT\"}")).andExpect(status().isOk());
+  assertEquals("CUSTOMER",db.queryForObject("SELECT lifecycle_status FROM penny_customers WHERE name='Manuale'",String.class));
+  assertEquals("PROSPECT",db.queryForObject("SELECT lifecycle_status FROM penny_customers WHERE id=10",String.class));
   mvc.perform(get("/api/customers").param("lifecycleStatus","INVALID").principal(admin)).andExpect(status().isBadRequest());
   db.update("INSERT INTO penny_user_permissions SELECT id,'SALES_WRITE','DENY' FROM penny_users WHERE email=?",admin.getName());
   mvc.perform(post("/api/sales").principal(admin).contentType(APPLICATION_JSON).content("{\"customerId\":10,\"catalogProductId\":1,\"soldOn\":\"2026-10-25\",\"quantity\":1}")).andExpect(status().isForbidden());
   assertEquals(0,db.queryForObject("SELECT count(*) FROM penny_sales",Integer.class));
+  // Changing a customer status grants no ability to create a sale.
+  assertEquals("PROSPECT",db.queryForObject("SELECT lifecycle_status FROM penny_customers WHERE id=10",String.class));
+  db.update("INSERT INTO penny_user_permissions SELECT id,'CUSTOMERS_WRITE','DENY' FROM penny_users WHERE email=?",admin.getName());
+  mvc.perform(put("/api/customers/10").principal(admin).contentType(APPLICATION_JSON).content("{\"kind\":\"COMPANY\",\"name\":\"Cliente\",\"lifecycleStatus\":\"CUSTOMER\"}")).andExpect(status().isForbidden());
+  assertEquals("PROSPECT",db.queryForObject("SELECT lifecycle_status FROM penny_customers WHERE id=10",String.class));
  }
  @Test void businessFieldsPreserveOmittedAndRejectInvalidReferences() throws Exception {
   mvc.perform(put("/api/customers/10").principal(admin).contentType(APPLICATION_JSON).content("{\"kind\":\"COMPANY\",\"name\":\"Cliente\",\"sector\":\"CAD\",\"isInsolvent\":true,\"isCollaborator\":true}")).andExpect(status().isOk());

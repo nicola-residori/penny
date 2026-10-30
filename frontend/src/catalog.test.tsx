@@ -12,7 +12,7 @@ beforeEach(()=>{
  installations=[];calls=[];
  vi.stubGlobal('fetch',vi.fn(async (url:string,options?:RequestInit)=>{
   if(options?.body) calls.push({url,body:JSON.parse(options.body as string)});
-  const data=url.includes('/csrf')?{token:'test'}:url.startsWith('/api/customers')?{items:[{id:1,name:'Cliente'}],total:1}:url.startsWith('/api/catalog-products')?{items:[entry],total:1}:options?.method==='POST'?{id:1}:url==='/api/installed-products/1'?{id:1,customerId:1,category:'SOFTWARE',name:'Penny Enterprise',origin:'INTERNAL',catalogProductId:7,status:'ACTIVE'}:{items:installations,total:installations.length};
+  const data=url.includes('/csrf')?{token:'test'}:/^\/api\/customers\/\d+\/contacts$/.test(url)?[]:url.startsWith('/api/customers')?{items:[{id:1,name:'Cliente'}],total:1}:url.startsWith('/api/catalog-products')?{items:[entry],total:1}:options?.method==='POST'?{id:1}:url==='/api/installed-products/1'?{id:1,customerId:1,category:'SOFTWARE',name:'Penny Enterprise',origin:'INTERNAL',catalogProductId:7,status:'ACTIVE'}:{items:installations,total:installations.length};
   return {ok:true,json:async()=>data};
  }));
 });

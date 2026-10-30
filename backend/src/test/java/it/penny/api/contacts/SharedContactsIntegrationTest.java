@@ -125,4 +125,21 @@ class SharedContactsIntegrationTest {
    .andExpect(jsonPath("$.links[1].role").value("Direzione"));
  }
 
+
+ @Test void structuredContactFieldsRoundTripAndLegacyUpdatesPreserveDetails() throws Exception {
+  mvc.perform(post("/api/contacts").principal(admin).contentType(APPLICATION_JSON).content("""
+   {"fullName":"Ada Lovelace","firstName":"Ada","lastName":"Lovelace","phone":"0123","companyMobile":"333","personalMobile":"444","email":"ada@example.com","contactStatus":"DISMISSED","contactReference":"rif. tecnico","links":[{"customerId":1,"role":"Tecnico"}]}
+   """)).andExpect(status().isOk());
+  long id=db.queryForObject("SELECT id FROM penny_customer_contacts",Long.class);
+  mvc.perform(get("/api/contacts/"+id).principal(admin)).andExpect(jsonPath("$.firstName").value("Ada")).andExpect(jsonPath("$.personalMobile").value("444")).andExpect(jsonPath("$.contactStatus").value("DISMISSED"));
+  mvc.perform(put("/api/contacts/"+id).principal(admin).contentType(APPLICATION_JSON).content("{\"fullName\":\"Ada aggiornata\",\"links\":[{\"customerId\":1}]}" )).andExpect(status().isOk());
+  mvc.perform(get("/api/customers/1/contacts").principal(admin)).andExpect(jsonPath("$[0].companyMobile").value("333")).andExpect(jsonPath("$[0].lastName").value("Lovelace"));
+ }
+ @Test void customerCommercialStatusCanBeChangedManually() throws Exception {
+  String body="{\"kind\":\"COMPANY\",\"name\":\"Uno\",\"country\":\"IT\",\"lifecycleStatus\":\"CUSTOMER\"}";
+  mvc.perform(put("/api/customers/1").principal(admin).contentType(APPLICATION_JSON).content(body)).andExpect(status().isOk());
+  assertEquals("CUSTOMER",db.queryForObject("SELECT lifecycle_status FROM penny_customers WHERE id=1",String.class));
+  mvc.perform(put("/api/customers/1").principal(admin).contentType(APPLICATION_JSON).content(body.replace("CUSTOMER","PROSPECT"))).andExpect(status().isOk());
+  assertEquals("PROSPECT",db.queryForObject("SELECT lifecycle_status FROM penny_customers WHERE id=1",String.class));
+ }
 }

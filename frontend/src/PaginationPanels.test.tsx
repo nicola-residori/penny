@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import {afterEach,expect,test,vi} from 'vitest';
-import {cleanup,fireEvent,render,screen,waitFor} from '@testing-library/react';
+import {cleanup,fireEvent,render,screen,waitFor,within} from '@testing-library/react';
 import WorkstationsPanel from './WorkstationsPanel';
 import LookupSelect from './LookupSelect';
 import SalesPanel from './SalesPanel';
@@ -33,6 +33,6 @@ test('lookup clamps an out-of-range result and disables navigation while loading
 test('sales and availability keep single-page counts without navigation',async()=>{
  vi.mocked(api).mockResolvedValue({items:[{id:1,customerName:'Acme',productName:'Suite',totalAmount:10,quantity:1,unitPrice:10,allocatedQuantity:0,availableQuantity:1}],total:1,totals:{soldQuantity:1,allocatedQuantity:0,availableQuantity:1}} as never);
  const sales=render(<SalesPanel canWrite={false} canReadCustomers={false}/>);
- await screen.findByText('1 risultato');expect(screen.queryByRole('button',{name:'Successiva'})).toBeNull();sales.unmount();
+ await within(screen.getByRole('region',{name:'Elenco Vendite'})).findByText('1 risultato');expect(screen.queryByRole('button',{name:'Successiva'})).toBeNull();sales.unmount();
  render(<InventoryPanel canAllocate={false} canReadCustomers={false}/>);await screen.findByText('1 vendita');expect(screen.queryByText(/Pagina/)).toBeNull();
 });

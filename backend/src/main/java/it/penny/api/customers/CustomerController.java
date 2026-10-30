@@ -44,7 +44,7 @@ public class CustomerController {
  public record CustomerInput(String kind,String name,String vatNumber,String taxCode,String email,String phone,String street,String postalCode,String city,String province,String country,String notes,String lifecycleStatus) {}
  public record ContactInput(String fullName,String role,String email,String phone,Boolean isPrimary,Long siteId) {}
  private MapSqlParameterSource params(CustomerInput input) {
-  if(input==null)throw bad("Dati obbligatori");kind(input.kind());if(input.lifecycleStatus()!=null)throw bad("Lo stato commerciale è automatico alla prima vendita");String name=required(input.name(),200);
+  if(input==null)throw bad("Dati obbligatori");kind(input.kind());if(input.lifecycleStatus()!=null)lifecycle(input.lifecycleStatus());String name=required(input.name(),200);
   String vat=clean(input.vatNumber(),32),tax=clean(input.taxCode(),32),mail=clean(input.email(),254);
   email(mail);String nation=clean(input.country(),2);if(nation==null)nation="IT";country(nation);
   String notes=input.notes()==null?null:input.notes().trim();if(notes!=null&&notes.length()>10000)throw bad("Note troppo lunghe");
@@ -95,7 +95,7 @@ public class CustomerController {
   require(auth,"CUSTOMERS_WRITE");exists(id);if(body.get("archived")==null)throw bad("archived obbligatorio");db.update("UPDATE penny_customers SET archived=?,updated_at=now() WHERE id=? AND deleted_at IS NULL",body.get("archived"),id);return Map.of("updated",true);
  }
  @GetMapping("/{id}/contacts") public List<Map<String,Object>> contacts(@PathVariable long id,Authentication auth) {
-  require(auth,"CUSTOMERS_READ");exists(id);return db.queryForList("SELECT (c.image_data IS NOT NULL) AS \"hasImage\",c.id,c.id AS \"contactId\",l.customer_id AS \"customerId\",c.full_name AS \"fullName\",l.role,c.email,c.phone,l.is_primary AS \"isPrimary\",l.site_id AS \"siteId\",s.name AS \"siteName\",(SELECT count(*) FROM penny_contact_customers x JOIN penny_customers cu ON cu.id=x.customer_id WHERE x.contact_id=c.id AND cu.deleted_at IS NULL) AS \"customerCount\" FROM penny_customer_contacts c JOIN penny_contact_customers l ON l.contact_id=c.id LEFT JOIN penny_customer_sites s ON s.id=l.site_id WHERE l.customer_id=? AND c.deleted_at IS NULL ORDER BY l.is_primary DESC,c.full_name,c.id",id);
+  require(auth,"CUSTOMERS_READ");exists(id);return db.queryForList("SELECT "+ContactController.EXTRA_FIELDS+"(c.image_data IS NOT NULL) AS \"hasImage\",c.id,c.id AS \"contactId\",l.customer_id AS \"customerId\",c.full_name AS \"fullName\",l.role,c.email,c.phone,l.is_primary AS \"isPrimary\",l.site_id AS \"siteId\",s.name AS \"siteName\",(SELECT count(*) FROM penny_contact_customers x JOIN penny_customers cu ON cu.id=x.customer_id WHERE x.contact_id=c.id AND cu.deleted_at IS NULL) AS \"customerCount\" FROM penny_customer_contacts c JOIN penny_contact_customers l ON l.contact_id=c.id LEFT JOIN penny_customer_sites s ON s.id=l.site_id WHERE l.customer_id=? AND c.deleted_at IS NULL ORDER BY l.is_primary DESC,c.full_name,c.id",id);
  }
  @PostMapping("/{id}/contacts") @Transactional public Map<String,Object> addContact(@PathVariable long id,@RequestBody ContactInput input,Authentication auth) {
   require(auth,"CUSTOMERS_WRITE");exists(id);

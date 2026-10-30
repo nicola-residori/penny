@@ -21,14 +21,16 @@ test('inventario non espone importi e mostra totali',async()=>{
  render(<InventoryPanel canAllocate={false}/>);
  expect(await screen.findByText('120')).toBeTruthy();expect(screen.queryByText(/€/)).toBeNull();
 });
-test('crea vendita con cliente e catalogo selezionati',async()=>{
- vi.mocked(api).mockImplementation(async(path,method)=>method==='POST'?{id:3}:path.includes('/customers')?{items:[{id:1,name:'Acme'}],total:1}:path.includes('catalog-products')?{items:[{id:2,name:'Suite'}],total:1}:path.includes('summary')?{totals:{soldQuantity:0,allocatedQuantity:0,availableQuantity:0,totalAmount:0}}:{items:[],total:0} as never);
+test('crea ordine con cliente e righe catalogo selezionati',async()=>{
+ vi.mocked(api).mockImplementation(async(path,method)=>method==='POST'?{id:3}:path==='/api/sales-orders/3'?{id:3,order_number:'123/26',status:'DRAFT',lines:[{id:7,productName:'Suite',quantity:1,unitPrice:'0',business:{operationalKind:'SOFTWARE'}}]}:path.includes('/customers')?{items:[{id:1,name:'Acme'}],total:1}:path.includes('catalog-products')?{items:[{id:2,name:'Suite'}],total:1}:path.includes('summary')?{totals:{soldQuantity:0,allocatedQuantity:0,availableQuantity:0,totalAmount:0}}:{items:[],total:0} as never);
  render(<SalesPanel canWrite/>);fireEvent.click(screen.getByRole('button',{name:'Nuova vendita'}));
  await screen.findByRole('option',{name:'Suite'});
  fireEvent.change(screen.getByLabelText('Cliente',{selector:'select'}),{target:{value:'1'}});
+ fireEvent.change(screen.getByLabelText('Numero ordine',{selector:'input:not([type="checkbox"])'}),{target:{value:'123/26'}});
  fireEvent.change(screen.getByLabelText('Prodotto catalogo',{selector:'select'}),{target:{value:'2'}});
  fireEvent.click(screen.getByRole('button',{name:'Salva vendita'}));
- await waitFor(()=>expect(api).toHaveBeenCalledWith('/api/sales','POST',expect.objectContaining({customerId:1,catalogProductId:2,quantity:1,unitPrice:'0'})));
+ await waitFor(()=>expect(api).toHaveBeenCalledWith('/api/sales-orders','POST',expect.objectContaining({customerId:1,orderNumber:'123/26',lines:[{catalogProductId:2,quantity:1,unitPrice:'0',business:{}}]})));
+ expect(await screen.findByRole('button',{name:'Conferma ordine e genera parco cliente'})).toBeTruthy();
 });
 test('assegna quantità solo a installazioni compatibili e sfoglia oltre cento',async()=>{
  vi.mocked(api).mockImplementation(async(path,method)=>method==='POST'?{id:5}:path.includes('installed-products')?{items:[{id:9,name:'Corretta',catalogProductId:2,status:'ACTIVE'},{id:10,name:'Altro prodotto',catalogProductId:3,status:'ACTIVE'},{id:11,name:'Dismessa',catalogProductId:2,status:'RETIRED'}],total:121}:path.includes('allocations')?{items:[],total:0}:{items:[{id:1,customerId:1,catalogProductId:2,customerName:'Acme',productName:'Suite',quantity:3,allocatedQuantity:0,availableQuantity:3}],total:1,totals:{soldQuantity:3,allocatedQuantity:0,availableQuantity:3}} as never);
@@ -65,4 +67,12 @@ test('cambio vendita nasconde immediatamente assegnazioni precedenti anche se la
 test('precompila il prezzo dal catalogo mantenendolo modificabile',async()=>{
  vi.mocked(api).mockImplementation(async(path)=>path.includes('/customers')?{items:[{id:1,name:'Acme'}],total:1}:path.includes('catalog-products')?{items:[{id:2,name:'Suite',price:'99.90'}],total:1}:path.includes('summary')?{totals:{soldQuantity:0,allocatedQuantity:0,availableQuantity:0,totalAmount:0}}:{items:[],total:0} as never);
  render(<SalesPanel canWrite/>);fireEvent.click(screen.getByRole('button',{name:'Nuova vendita'}));await screen.findByRole('option',{name:'Suite'});fireEvent.change(screen.getByLabelText('Prodotto catalogo',{selector:'select'}),{target:{value:'2'}});expect((screen.getByLabelText('Prezzo unitario netto EUR') as HTMLInputElement).value).toBe('99.90');fireEvent.change(screen.getByLabelText('Prezzo unitario netto EUR'),{target:{value:'95.00'}});expect((screen.getByLabelText('Prezzo unitario netto EUR') as HTMLInputElement).value).toBe('95.00');
+});
+test('ricava categoria e tipologia software e salva codici dalle scelte italiane',async()=>{
+ vi.mocked(api).mockImplementation(async(path,method)=>method==='POST'?{id:3}:path==='/api/sales-orders/3'?{id:3,order_number:'SW-1',status:'DRAFT',lines:[]}:path.includes('/customers')?{items:[{id:1,name:'Acme'}],total:1}:path.includes('catalog-products')?{items:[{id:2,name:'Suite',price:'100.00',category:'SOFTWARE',categoryName:'Software',operationalKind:'SOFTWARE',productTypeName:'CAD'}],total:1}:path.includes('summary')?{totals:{soldQuantity:0,allocatedQuantity:0,availableQuantity:0,totalAmount:0}}:{items:[],total:0} as never);
+ render(<SalesPanel canWrite/>);fireEvent.click(screen.getByRole('button',{name:'Nuova vendita'}));await screen.findByRole('option',{name:'Suite'});
+ fireEvent.change(screen.getByLabelText('Cliente',{selector:'select'}),{target:{value:'1'}});fireEvent.change(screen.getByLabelText('Numero ordine',{selector:'input:not([type="checkbox"])'}),{target:{value:'SW-1'}});fireEvent.change(screen.getByLabelText('Prodotto catalogo',{selector:'select'}),{target:{value:'2'}});
+ expect(screen.getByText(/Prodotto: Suite · Categoria: Software · Tipologia: CAD/)).toBeTruthy();
+ fireEvent.change(screen.getByLabelText('Tipo operazione commerciale'),{target:{value:'FIRST_RENEWAL'}});expect(screen.getByRole('option',{name:'1° rinnovo'})).toBeTruthy();fireEvent.change(screen.getByLabelText('Tipo licenza / uscita'),{target:{value:'ANNUAL'}});expect(screen.getByRole('option',{name:'Licenza annuale'})).toBeTruthy();expect(screen.queryByLabelText('Matricola (anche successiva)')).toBeNull();
+ fireEvent.click(screen.getByRole('button',{name:'Salva vendita'}));await waitFor(()=>expect(api).toHaveBeenCalledWith('/api/sales-orders','POST',expect.objectContaining({lines:[{catalogProductId:2,quantity:1,unitPrice:'100.00',business:{operationType:'FIRST_RENEWAL',licenseType:'ANNUAL'}}]})));
 });

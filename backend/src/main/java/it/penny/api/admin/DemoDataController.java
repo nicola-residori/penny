@@ -19,7 +19,7 @@ public class DemoDataController {
  private final ObjectMapper json;
  private static final Map<String,String> TABLES;
  static {var tables=new LinkedHashMap<String,String>();
-  tables.put("customers","penny_customers");tables.put("contacts","penny_customer_contacts");tables.put("contactLinks","penny_contact_customers");tables.put("sites","penny_customer_sites");tables.put("catalog","penny_catalog_products");tables.put("installations","penny_installed_products");tables.put("sales","penny_sales");tables.put("allocations","penny_sale_allocations");tables.put("workstations","penny_workstations");tables.put("trash","penny_trash_entries");tables.put("customerRecords","penny_customer_records");tables.put("recordParticipants","penny_record_participants");TABLES=Collections.unmodifiableMap(tables);
+  tables.put("customers","penny_customers");tables.put("contacts","penny_customer_contacts");tables.put("contactLinks","penny_contact_customers");tables.put("sites","penny_customer_sites");tables.put("catalog","penny_catalog_products");tables.put("installations","penny_installed_products");tables.put("sales","penny_sales");tables.put("allocations","penny_sale_allocations");tables.put("workstations","penny_workstations");tables.put("trash","penny_trash_entries");tables.put("customerRecords","penny_customer_records");tables.put("recordParticipants","penny_record_participants");tables.put("orders","penny_sales_orders");tables.put("tasks","penny_record_tasks");tables.put("interventionLinks","penny_record_interventions");tables.put("renewals","penny_contract_renewals");tables.put("documents","penny_documents");tables.put("notifications","penny_notifications");tables.put("marginProfiles","penny_margin_profiles");tables.put("marginRules","penny_margin_rules");tables.put("marginSnapshots","penny_margin_snapshots");tables.put("marginEvents","penny_margin_events");tables.put("marginRuleAudit","penny_margin_rule_audit");TABLES=Collections.unmodifiableMap(tables);
  }
  public DemoDataController(JdbcTemplate db,PennyUserRepository users,RbacService rbac,ObjectMapper json){this.db=db;this.users=users;this.rbac=rbac;this.json=json;}
  private void require(Authentication auth){rbac.require(users.findByEmailIgnoreCase(auth.getName()).orElse(null),"DATA_MANAGE");}
@@ -40,6 +40,9 @@ public class DemoDataController {
   db.execute("TRUNCATE "+String.join(",",TABLES.values())+",penny_demo_environment CONTINUE IDENTITY");
   audit(auth.getName(),"ENVIRONMENT_RESET",before);return state();
  }
+ private void linkDemoOrders(){
+  for(var line:db.queryForList("SELECT id,customer_id,reference,sold_on,status,notes FROM penny_sales WHERE order_id IS NULL ORDER BY id")){long order=db.queryForObject("INSERT INTO penny_sales_orders(customer_id,order_number,sold_on,status,notes) VALUES (?,?,?,?,?) RETURNING id",Long.class,line.get("customer_id"),line.get("reference")==null?"DEMO-"+line.get("id"):line.get("reference"),line.get("sold_on"),line.get("status"),line.get("notes"));db.update("UPDATE penny_sales SET order_id=? WHERE id=?",order,line.get("id"));}
+ }
  @PostMapping("/demo") @Transactional public Map<String,Object> demo(@RequestBody DemoInput input,Authentication auth){
   require(auth);if(!Boolean.TRUE.equals(input.confirm()))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Conferma il caricamento dei dati demo");
   lock();int version=scenarioVersion();if(version>=2)return state();
@@ -47,7 +50,7 @@ public class DemoDataController {
    db.queryForObject("SELECT set_config('penny.actor',?,true)",String.class,auth.getName());
    new ExpandedDemoScenarioSeeder(db).seed(auth.getName());
    db.update("UPDATE penny_demo_environment SET scenario_version=2 WHERE id=1");
-   audit(auth.getName(),"DEMO_DATA_EXPANDED",counts());return state();
+   linkDemoOrders();audit(auth.getName(),"DEMO_DATA_EXPANDED",counts());return state();
   }
   db.queryForObject("SELECT set_config('penny.actor',?,true)",String.class,auth.getName());
   long[] customers=new long[12];
@@ -90,6 +93,6 @@ public class DemoDataController {
   db.update("INSERT INTO penny_trash_entries(entity_type,entity_id,label,deleted_by,deleted_at,expires_at) VALUES ('CUSTOMER',?,'[DEMO] Anagrafica nel cestino',?,now(),now()+interval '720 hours')",trashed,auth.getName());
   db.update("INSERT INTO penny_catalog_products(code,name,category,origin,active) VALUES ('DEMO-ARCHIVE','[DEMO] Modello fuori listino','HARDWARE','THIRD_PARTY',false)");
   new ExpandedDemoScenarioSeeder(db).seed(auth.getName());
-  db.update("INSERT INTO penny_demo_environment(id,actor,scenario_version) VALUES (1,?,2)",auth.getName());audit(auth.getName(),"DEMO_DATA_LOADED",counts());return state();
+  db.update("INSERT INTO penny_demo_environment(id,actor,scenario_version) VALUES (1,?,2)",auth.getName());linkDemoOrders();audit(auth.getName(),"DEMO_DATA_LOADED",counts());return state();
  }
 }

@@ -24,10 +24,11 @@ it('keeps product queries scoped to the customer and selected category',async()=
  await screen.findByText('Nessun prodotto trovato.');
  const calls=vi.mocked(fetch).mock.calls.map(c=>String(c[0]));
  expect(calls.some(path=>path.includes('/api/installed-products?')&&path.includes('customerId=42')&&path.includes('category=SOFTWARE'))).toBe(true);
- expect(calls.some(path=>path.startsWith('/api/customers'))).toBe(false);
+ expect(calls.some(path=>/^\/api\/customers(?:\?|$)/.test(path))).toBe(false);
+ expect(calls.filter(path=>path.startsWith('/api/customers/')).every(path=>path.startsWith('/api/customers/42/'))).toBe(true);
  await userEvent.click(screen.getByRole('button',{name:'+ Nuovo prodotto'}));
- expect((screen.getByLabelText('Categoria') as HTMLSelectElement).value).toBe('SOFTWARE');
- expect((screen.getByLabelText('Categoria') as HTMLSelectElement).disabled).toBe(true);
+ expect((screen.getByLabelText('Categoria',{selector:'select'}) as HTMLSelectElement).value).toBe('SOFTWARE');
+ expect((screen.getByLabelText('Categoria',{selector:'select'}) as HTMLSelectElement).disabled).toBe(true);
  expect(screen.queryByLabelText('Cliente installazione')).toBeNull();
 });
 it('supports arrow, Home and End navigation with one tab stop',async()=>{
