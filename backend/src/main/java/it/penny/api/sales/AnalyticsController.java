@@ -18,7 +18,9 @@ public class AnalyticsController {
  public enum GroupBy { DAY,WEEK,MONTH,YEAR }
  public record Permissions(boolean salesRead,boolean customersRead) {}
  public record Metrics(String salesAmount,Long soldQuantity,Long saleCount,Long newCustomers,Long customersToDate,Long unknownCustomerDates) {}
- public record Period(LocalDate period,LocalDate periodEnd,String salesAmount,Long soldQuantity,Long saleCount,Long newCustomers,Long customersToDate) {}
+ public record Percent(String salesAmount,String soldQuantity,String customersToDate) {}
+ public record Comparison(LocalDate from,LocalDate to,Metrics previous,Metrics gap,Percent percent) {}
+ public record Period(LocalDate period,LocalDate periodEnd,String salesAmount,Long soldQuantity,Long saleCount,Long newCustomers,Long customersToDate,Comparison comparison) {}
  public record Analytics(LocalDate from,LocalDate to,GroupBy groupBy,String span,Long customerId,Permissions permissions,Metrics totals,List<Period> series) {}
  private record Sales(BigDecimal amount,long quantity,long count) {
   static final Sales ZERO=new Sales(new BigDecimal("0.00"),0,0);
@@ -27,7 +29,7 @@ public class AnalyticsController {
  @GetMapping
  @Transactional(readOnly=true,isolation=org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
  public Analytics analytics(@RequestParam LocalDate from,@RequestParam LocalDate to,
-   @RequestParam(defaultValue="YEAR") String groupBy,@RequestParam(required=false) String span,@RequestParam(required=false) Long customerId,Authentication auth){
+   @RequestParam(defaultValue="YEAR") String groupBy,@RequestParam(required=false) String span,@RequestParam(required=false) Long customerId,@RequestParam(defaultValue="false") boolean comparePreviousYear,Authentication auth){
   var user=support.user(auth);
   boolean salesRead=support.allowed(user,"SALES_READ"),customersRead=support.allowed(user,"CUSTOMERS_READ");
   if(!salesRead&&!customersRead)throw new ResponseStatusException(HttpStatus.FORBIDDEN,"Accesso non consentito");
@@ -65,8 +67,9 @@ public class AnalyticsController {
   for(LocalDate date=first;!date.isAfter(last);date=bucket.next(date)){
    Sales value=sales.getOrDefault(date,Sales.ZERO);total=total.plus(value);
    long acquired=acquisitions.getOrDefault(date,0L);newTotal+=acquired;cumulative+=acquired;
-   series.add(new Period(date,bucket.next(date).minusDays(1),salesRead?value.amount.toPlainString():null,salesRead?value.quantity:null,salesRead?value.count:null,customersRead?acquired:null,customersRead?cumulative:null));
+   series.add(new Period(date,bucket.next(date).minusDays(1),salesRead?value.amount.toPlainString():null,salesRead?value.quantity:null,salesRead?value.count:null,customersRead?acquired:null,customersRead?cumulative:null,null));
   }
+  if(comparePreviousYear)series=new AnalyticsYearComparison(support).attach(series,from,to,bucket,customerId,salesRead,customersRead);
   return new Analytics(from,to,bucket.groupBy(),bucket.canonical(),customerId,new Permissions(salesRead,customersRead),new Metrics(salesRead?total.amount.toPlainString():null,salesRead?total.quantity:null,salesRead?total.count:null,customersRead?newTotal:null,customersRead?cumulative:null,customersRead?unknown:null),series);
  }
 }

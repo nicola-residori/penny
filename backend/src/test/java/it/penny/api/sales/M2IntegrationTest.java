@@ -225,6 +225,32 @@ class M2IntegrationTest {
  void analyticsSale(long customer,String date,int quantity,String price,String status){
   db.update("INSERT INTO penny_sales(customer_id,catalog_product_id,product_code,product_name,origin,category,sold_on,quantity,unit_price,status,cancellation_reason) VALUES (?,1,'PEN-01','Suite','INTERNAL','SOFTWARE',?::date,?,?,?,?)",customer,date,quantity,new java.math.BigDecimal(price),status,status.equals("CANCELLED")?"Errore":null);
  }
+ @Test void analyticsPreviousYearMatchesClippedCalendarDatesAndExactGaps()throws Exception{
+  analyticsSale(1,"2025-10-10",3,"0.10","CONFIRMED");analyticsSale(2,"2025-10-10",20,"10.00","CONFIRMED");
+  analyticsSale(1,"2024-10-10",2,"0.10","CONFIRMED");analyticsSale(1,"2024-10-09",99,"10.00","CONFIRMED");analyticsSale(1,"2024-10-10",100,"10.00","CANCELLED");
+  mvc.perform(get("/api/analytics").principal(admin).param("from","2025-10-10").param("to","2025-10-10").param("span","2w").param("customerId","1").param("comparePreviousYear","true"))
+   .andExpect(status().isOk()).andExpect(jsonPath("$.series[0].comparison.from").value("2024-10-10")).andExpect(jsonPath("$.series[0].comparison.to").value("2024-10-10"))
+   .andExpect(jsonPath("$.series[0].comparison.previous.salesAmount").value("0.20")).andExpect(jsonPath("$.series[0].comparison.gap.salesAmount").value("0.10")).andExpect(jsonPath("$.series[0].comparison.percent.salesAmount").value("50.00"))
+   .andExpect(jsonPath("$.series[0].comparison.previous.soldQuantity").value(2)).andExpect(jsonPath("$.series[0].comparison.gap.soldQuantity").value(1)).andExpect(jsonPath("$.series[0].comparison.previous.customersToDate").value(1));
+  mvc.perform(get("/api/analytics").principal(admin).param("from","2025-10-10").param("to","2025-10-10").param("span","1d")).andExpect(status().isOk()).andExpect(jsonPath("$.series[0].comparison").doesNotExist());
+ }
+ @Test void analyticsComparisonHandlesLeapDayZeroBaseNegativeGapAndPermissions()throws Exception{
+  analyticsSale(1,"2024-02-28",2,"5.00","CONFIRMED");analyticsSale(1,"2023-02-28",4,"5.00","CONFIRMED");
+  mvc.perform(get("/api/analytics").principal(admin).param("from","2024-02-28").param("to","2024-03-01").param("span","1d").param("comparePreviousYear","true"))
+   .andExpect(status().isOk()).andExpect(jsonPath("$.series[0].comparison.gap.salesAmount").value("-10.00")).andExpect(jsonPath("$.series[0].comparison.percent.salesAmount").value("-50.00")).andExpect(jsonPath("$.series[1].comparison").doesNotExist()).andExpect(jsonPath("$.series[2].comparison.previous.salesAmount").value("0.00")).andExpect(jsonPath("$.series[2].comparison.percent.salesAmount").doesNotExist());
+  db.update("INSERT INTO penny_user_permissions(user_id,permission_code,effect) SELECT id,'SALES_READ','DENY' FROM penny_users WHERE email=?",admin.getName());
+  mvc.perform(get("/api/analytics").principal(admin).param("from","2024-02-28").param("to","2024-02-28").param("span","1d").param("comparePreviousYear","true"))
+   .andExpect(status().isOk()).andExpect(jsonPath("$.series[0].comparison.previous.salesAmount").doesNotExist()).andExpect(jsonPath("$.series[0].comparison.gap.soldQuantity").doesNotExist()).andExpect(jsonPath("$.series[0].comparison.previous.customersToDate").value(1));
+ }
+ @Test void analyticsComparisonIncludesWholePriorLeapMonthAndUsesCustomerPermission()throws Exception{
+  analyticsSale(1,"2024-02-29",2,"5.00","CONFIRMED");analyticsSale(1,"2025-02-28",3,"5.00","CONFIRMED");
+  mvc.perform(get("/api/analytics").principal(admin).param("from","2025-02-01").param("to","2025-02-28").param("span","1mon").param("comparePreviousYear","true"))
+   .andExpect(status().isOk()).andExpect(jsonPath("$.series[0].comparison.to").value("2024-02-29")).andExpect(jsonPath("$.series[0].comparison.previous.salesAmount").value("10.00"));
+  db.update("INSERT INTO penny_user_permissions(user_id,permission_code,effect) SELECT id,'CUSTOMERS_READ','DENY' FROM penny_users WHERE email=?",admin.getName());
+  mvc.perform(get("/api/analytics").principal(admin).param("from","2025-02-01").param("to","2025-02-28").param("span","1mon").param("comparePreviousYear","true"))
+   .andExpect(status().isOk()).andExpect(jsonPath("$.series[0].comparison.previous.customersToDate").doesNotExist()).andExpect(jsonPath("$.series[0].comparison.previous.salesAmount").value("10.00"));
+  mvc.perform(get("/api/analytics").principal(admin).param("from","2025-02-01").param("to","2025-02-28").param("span","1mon").param("customerId","1").param("comparePreviousYear","true")).andExpect(status().isForbidden());
+ }
  @Test void analyticsCustomSpansAlignAndClipDailyAcquisition() throws Exception {
   analyticsSale(1,"2024-02-26",10,"1.00","CANCELLED");
   analyticsSale(1,"2024-02-27",100,"1.00","CONFIRMED");

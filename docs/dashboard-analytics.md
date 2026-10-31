@@ -23,6 +23,16 @@ Tre grafici: valore vendite EUR; risorse vendute; clienti acquisiti cumulativi. 
 
 SALES_READ espone importi, quantità e numero vendite; CUSTOMERS_READ espone acquisizione clienti e permette il filtro cliente. Senza permesso, le relative metriche sono assenti dall'interfaccia e null nell'API. Non sono dedotte dal semplice accesso all'inventario.
 
-API `GET /api/analytics?from=YYYY-MM-DD&to=YYYY-MM-DD&span=2d&customerId=opzionale`, lettura in transazione con snapshot coerente, importi restituiti come stringhe decimali esatte. Nessuna migrazione o modifica dei dati. La demo attuale contiene soprattutto vendite recenti: gli anni precedenti correttamente compaiono a zero. Selezionare Ultimi 12 mesi o E2 Gruppo Atlas per provare i filtri con i dati già caricati.
+API `GET /api/analytics?from=YYYY-MM-DD&to=YYYY-MM-DD&span=2d&customerId=opzionale`, lettura in transazione con snapshot coerente, importi restituiti come stringhe decimali esatte. Nessuna migrazione o modifica dei dati. La demo v3 contiene circa due anni di vendite giornaliere: selezionare Anno corrente o Ultimi 12 mesi e attivare il confronto per provare gli scostamenti.
 
 Compatibilità API: le richieste precedenti `groupBy=YEAR|MONTH` continuano a funzionare, mantenendo il limite precedente di 201 anni o 120 mesi. Se presente, `span` prevale. La risposta restituisce lo span canonico e `periodEnd` incluso per ogni bucket. Per stabilità i giorni sono allineati al 01/01/1970, le settimane al lunedì 05/01/1970, mesi e anni all'inizio del 1970; questo vale anche per date precedenti al 1970.
+
+## Confronto con l’anno precedente
+
+Lo switch **Confronta con l’anno precedente** è spento all’apertura. Attivandolo, senza riapplicare i filtri, tutti e tre i grafici aggiungono la linea tratteggiata dell’anno precedente sulla stessa scala. Passare su un punto o selezionarlo da tastiera mostra valore attuale, valore precedente, differenza assoluta e percentuale. La tabella include gli stessi scostamenti.
+
+Il confronto usa il periodo effettivamente selezionato, spostato di un anno civile, anche per span multipli e per il singolo cliente. I mesi interi confrontano mesi interi, compreso febbraio bisestile; il singolo 29 febbraio non ha equivalente e rimane senza confronto. Con valore precedente pari a zero lo scostamento assoluto è disponibile, ma la percentuale è non calcolabile. Nessuna percentuale viene inventata.
+
+L’API accetta `comparePreviousYear=true` ed estende ogni punto con `comparison`: intervallo precedente, metriche precedenti, gap esatti e percentuali. Restano applicati i permessi delle rispettive metriche. Lo switch spento evita le query aggiuntive.
+
+Il dataset demo v3 aggiunge 48 clienti con acquisizioni distribuite su 24 mesi, vendite giornaliere stagionali, contratti, corsi, sviluppi e attività tecniche con interventi. Il caricamento è incrementale e idempotente. In **Amministrazione → Ambiente e dati dimostrativi → Azzera dati CRM**, la conferma `RESET` elimina tutti i dati aziendali (anche quelli non demo), conservando utenti, ruoli e permessi e le configurazioni di base. Il reset non viene mai eseguito durante il caricamento o il rilascio.

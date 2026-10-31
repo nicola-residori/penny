@@ -15,6 +15,6 @@ it('requires typed RESET and shows counts before resetting',async()=>{
 });
 it('hides data tools without permission',()=>{render(<DemoDataPanel canManageData={false}/>);expect(screen.queryByRole('button')).toBeNull();});
 it('upgrades existing demo data without a reset and then prevents duplicate loads',async()=>{
- const fetcher=vi.fn(async(path:RequestInfo|URL,init?:RequestInit)=>({ok:true,json:async()=>String(path).endsWith('/csrf')?{token:'csrf'}:{canManageData:true,demoLoaded:true,scenarioVersion:init?.method==='POST'?2:1,demoUpgradeAvailable:init?.method!=='POST',counts:{customers:15}}}));vi.stubGlobal('fetch',fetcher);render(<DemoDataPanel canManageData/>);
+ const fetcher=vi.fn(async(path:RequestInfo|URL,init?:RequestInit)=>({ok:true,json:async()=>String(path).endsWith('/csrf')?{token:'csrf'}:{canManageData:true,demoLoaded:true,scenarioVersion:init?.method==='POST'?3:2,demoUpgradeAvailable:init?.method!=='POST',counts:{customers:15}}}));vi.stubGlobal('fetch',fetcher);render(<DemoDataPanel canManageData/>);
  await userEvent.click(await screen.findByRole('button',{name:'Amplia dati demo'}));await waitFor(()=>expect(fetcher.mock.calls.some(([p,i])=>p==='/api/admin/data/demo'&&i?.method==='POST')).toBe(true));expect(await screen.findByRole('button',{name:'Demo aggiornata'})).toHaveProperty('disabled',true);expect(fetcher.mock.calls.some(([p])=>String(p).endsWith('/reset'))).toBe(false);
 });

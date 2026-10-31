@@ -25,7 +25,7 @@ public class DemoDataController {
  private void require(Authentication auth){rbac.require(users.findByEmailIgnoreCase(auth.getName()).orElse(null),"DATA_MANAGE");}
  private Map<String,Long> counts(){var result=new LinkedHashMap<String,Long>();TABLES.forEach((key,table)->result.put(key,db.queryForObject("SELECT count(*) FROM "+table,Long.class)));return result;}
  private int scenarioVersion(){return db.queryForObject("SELECT coalesce(max(scenario_version),0) FROM penny_demo_environment",Integer.class);}
- private Map<String,Object> state(){int version=scenarioVersion();return Map.of("canManageData",true,"demoLoaded",version>0,"scenarioVersion",version,"demoUpgradeAvailable",version==1,"counts",counts());}
+ private Map<String,Object> state(){int version=scenarioVersion();return Map.of("canManageData",true,"demoLoaded",version>0,"scenarioVersion",version,"demoUpgradeAvailable",version>0&&version<3,"counts",counts());}
  @GetMapping("/state") public Map<String,Object> preview(Authentication auth){require(auth);return state();}
  public record DemoInput(Boolean confirm){}
  public record ResetInput(String confirmation){}
@@ -41,15 +41,22 @@ public class DemoDataController {
   audit(auth.getName(),"ENVIRONMENT_RESET",before);return state();
  }
  private void linkDemoOrders(){
-  for(var line:db.queryForList("SELECT id,customer_id,reference,sold_on,status,notes FROM penny_sales WHERE order_id IS NULL ORDER BY id")){long order=db.queryForObject("INSERT INTO penny_sales_orders(customer_id,order_number,sold_on,status,notes) VALUES (?,?,?,?,?) RETURNING id",Long.class,line.get("customer_id"),line.get("reference")==null?"DEMO-"+line.get("id"):line.get("reference"),line.get("sold_on"),line.get("status"),line.get("notes"));db.update("UPDATE penny_sales SET order_id=? WHERE id=?",order,line.get("id"));}
+  for(var line:db.queryForList("SELECT id,customer_id,reference,sold_on,status,notes FROM penny_sales WHERE order_id IS NULL AND (reference LIKE 'DEMO-%' OR reference LIKE 'E2-%') ORDER BY id")){long order=db.queryForObject("INSERT INTO penny_sales_orders(customer_id,order_number,sold_on,status,notes) VALUES (?,?,?,?,?) RETURNING id",Long.class,line.get("customer_id"),line.get("reference")==null?"DEMO-"+line.get("id"):line.get("reference"),line.get("sold_on"),line.get("status"),line.get("notes"));db.update("UPDATE penny_sales SET order_id=? WHERE id=?",order,line.get("id"));}
  }
  @PostMapping("/demo") @Transactional public Map<String,Object> demo(@RequestBody DemoInput input,Authentication auth){
   require(auth);if(!Boolean.TRUE.equals(input.confirm()))throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Conferma il caricamento dei dati demo");
-  lock();int version=scenarioVersion();if(version>=2)return state();
+  lock();int version=scenarioVersion();if(version>=3)return state();
+  if(version==2){
+   db.queryForObject("SELECT set_config('penny.actor',?,true)",String.class,auth.getName());
+   new HistoricalDemoScenarioSeeder(db).seed(auth.getName());
+   db.update("UPDATE penny_demo_environment SET scenario_version=3 WHERE id=1");
+   audit(auth.getName(),"DEMO_DATA_HISTORY_ADDED",counts());return state();
+  }
   if(version==1){
    db.queryForObject("SELECT set_config('penny.actor',?,true)",String.class,auth.getName());
    new ExpandedDemoScenarioSeeder(db).seed(auth.getName());
-   db.update("UPDATE penny_demo_environment SET scenario_version=2 WHERE id=1");
+   new HistoricalDemoScenarioSeeder(db).seed(auth.getName());
+   db.update("UPDATE penny_demo_environment SET scenario_version=3 WHERE id=1");
    linkDemoOrders();audit(auth.getName(),"DEMO_DATA_EXPANDED",counts());return state();
   }
   db.queryForObject("SELECT set_config('penny.actor',?,true)",String.class,auth.getName());
@@ -93,6 +100,7 @@ public class DemoDataController {
   db.update("INSERT INTO penny_trash_entries(entity_type,entity_id,label,deleted_by,deleted_at,expires_at) VALUES ('CUSTOMER',?,'[DEMO] Anagrafica nel cestino',?,now(),now()+interval '720 hours')",trashed,auth.getName());
   db.update("INSERT INTO penny_catalog_products(code,name,category,origin,active) VALUES ('DEMO-ARCHIVE','[DEMO] Modello fuori listino','HARDWARE','THIRD_PARTY',false)");
   new ExpandedDemoScenarioSeeder(db).seed(auth.getName());
-  db.update("INSERT INTO penny_demo_environment(id,actor,scenario_version) VALUES (1,?,2)",auth.getName());linkDemoOrders();audit(auth.getName(),"DEMO_DATA_LOADED",counts());return state();
+   new HistoricalDemoScenarioSeeder(db).seed(auth.getName());
+  db.update("INSERT INTO penny_demo_environment(id,actor,scenario_version) VALUES (1,?,3)",auth.getName());linkDemoOrders();audit(auth.getName(),"DEMO_DATA_LOADED",counts());return state();
  }
 }

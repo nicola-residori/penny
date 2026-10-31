@@ -82,15 +82,20 @@ class DemoDataIntegrationTest {
   assertEquals(5,atlasTypes.size());
   String[] expectedTypes={"[\"LEGAL\",\"ADMINISTRATIVE\"]","[\"OPERATIONAL\"]","[\"OPERATIONAL\",\"WAREHOUSE\"]","[\"COMMERCIAL\"]","[\"WAREHOUSE\"]"};
   for(int index=0;index<5;index++)assertEquals(json.readTree(expectedTypes[index]),json.readTree(atlasTypes.get(index)));
+  int salesBefore=db.queryForObject("SELECT count(*) FROM penny_sales",Integer.class);
+  assertTrue(db.queryForObject("SELECT max(sold_on)-min(sold_on) FROM penny_sales WHERE reference LIKE 'E3-%'",Integer.class)>=729);
   int before=db.queryForObject("SELECT count(*) FROM penny_customers",Integer.class);
   mvc.perform(secured(post("/api/admin/data/demo"),csrf()).session(session).contentType(MediaType.APPLICATION_JSON).content("{\"confirm\":true}")).andExpect(status().isOk());
   assertEquals(before,db.queryForObject("SELECT count(*) FROM penny_customers",Integer.class));
+  assertEquals(salesBefore,db.queryForObject("SELECT count(*) FROM penny_sales",Integer.class));
  }
  @Test void resetRequiresExactPhrasePreservesSecurityAndAudits() throws Exception {
   MockHttpSession session=login(email,PASSWORD);
   db.update("INSERT INTO penny_customers(kind,name) VALUES ('COMPANY','Real company')");
   int users=db.queryForObject("SELECT count(*) FROM penny_users",Integer.class);
   int roles=db.queryForObject("SELECT count(*) FROM penny_roles",Integer.class);
+  int choices=db.queryForObject("SELECT count(*) FROM penny_choices",Integer.class);
+  int types=db.queryForObject("SELECT count(*) FROM penny_product_types",Integer.class);
   mvc.perform(secured(post("/api/admin/data/reset"),csrf()).session(session).contentType(MediaType.APPLICATION_JSON).content("{\"confirmation\":\"reset\"}")).andExpect(status().isBadRequest());
   assertEquals(1,db.queryForObject("SELECT count(*) FROM penny_customers",Integer.class));
   mvc.perform(secured(post("/api/admin/data/demo"),csrf()).session(session).contentType(MediaType.APPLICATION_JSON).content("{\"confirm\":true}")).andExpect(status().isOk());
@@ -99,10 +104,12 @@ class DemoDataIntegrationTest {
   assertTrue(db.queryForObject("SELECT count(*) FROM penny_sales_orders",Integer.class)>0);
   long maxBefore=db.queryForObject("SELECT max(id) FROM penny_customers",Long.class);
   mvc.perform(secured(post("/api/admin/data/reset"),csrf()).session(session).contentType(MediaType.APPLICATION_JSON).content("{\"confirmation\":\"RESET\"}")).andExpect(status().isOk());
-  for(String table:new String[]{"penny_customers","penny_customer_contacts","penny_contact_customers","penny_customer_sites","penny_catalog_products","penny_sales","penny_sale_allocations","penny_installed_products","penny_workstations","penny_trash_entries","penny_demo_environment","penny_sales_orders","penny_documents","penny_notifications","penny_record_tasks","penny_record_interventions","penny_contract_renewals","penny_margin_profiles","penny_margin_rules","penny_margin_snapshots","penny_margin_events","penny_margin_rule_audit"})assertEquals(0,db.queryForObject("SELECT count(*) FROM "+table,Integer.class),table);
+  for(String table:new String[]{"penny_customer_records","penny_record_participants","penny_customers","penny_customer_contacts","penny_contact_customers","penny_customer_sites","penny_catalog_products","penny_sales","penny_sale_allocations","penny_installed_products","penny_workstations","penny_trash_entries","penny_demo_environment","penny_sales_orders","penny_documents","penny_notifications","penny_record_tasks","penny_record_interventions","penny_contract_renewals","penny_margin_profiles","penny_margin_rules","penny_margin_snapshots","penny_margin_events","penny_margin_rule_audit"})assertEquals(0,db.queryForObject("SELECT count(*) FROM "+table,Integer.class),table);
   assertEquals(0,db.queryForObject("SELECT count(*) FROM penny_customers",Integer.class));
   assertEquals(users,db.queryForObject("SELECT count(*) FROM penny_users",Integer.class));
   assertEquals(roles,db.queryForObject("SELECT count(*) FROM penny_roles",Integer.class));
+  assertEquals(choices,db.queryForObject("SELECT count(*) FROM penny_choices",Integer.class));
+  assertEquals(types,db.queryForObject("SELECT count(*) FROM penny_product_types",Integer.class));
   assertTrue(db.queryForObject("SELECT count(*) FROM penny_m2_audit WHERE action='ENVIRONMENT_RESET' AND actor=?",Integer.class,email)>0);
   long next=db.queryForObject("INSERT INTO penny_customers(kind,name) VALUES ('COMPANY','New identity after reset') RETURNING id",Long.class);assertTrue(next>maxBefore,"Reset must not reuse retained audit entity identities");
  }
@@ -132,7 +139,7 @@ class DemoDataIntegrationTest {
   long existingContact=db.queryForObject("INSERT INTO penny_customer_contacts(customer_id,full_name,email,role) VALUES (?,'[DEMO] E2 Contatto 80','real@example.invalid','Existing role') RETURNING id",Long.class,real);
   db.update("INSERT INTO penny_demo_environment(id,actor) VALUES (1,?)",email);
   mvc.perform(get("/api/admin/data/state").session(session)).andExpect(jsonPath("$.scenarioVersion").value(1)).andExpect(jsonPath("$.demoUpgradeAvailable").value(true));
-  mvc.perform(secured(post("/api/admin/data/demo"),csrf()).session(session).contentType(MediaType.APPLICATION_JSON).content("{\"confirm\":true}")).andExpect(status().isOk()).andExpect(jsonPath("$.scenarioVersion").value(2));
+  mvc.perform(secured(post("/api/admin/data/demo"),csrf()).session(session).contentType(MediaType.APPLICATION_JSON).content("{\"confirm\":true}")).andExpect(status().isOk()).andExpect(jsonPath("$.scenarioVersion").value(3));
   assertEquals("keep",db.queryForObject("SELECT notes FROM penny_customers WHERE id=?",String.class,real));
   assertEquals(50,db.queryForObject("SELECT count(*) FROM penny_customers WHERE name LIKE '[DEMO] E2 %'",Integer.class));
   assertTrue(db.queryForObject("SELECT count(*) FROM penny_customer_sites WHERE name LIKE '[DEMO] E2 %'",Integer.class)>100);
@@ -169,6 +176,44 @@ class DemoDataIntegrationTest {
    assertEquals("Existing before expansion",db.queryForObject("SELECT name FROM penny_customers WHERE id=?",String.class,real));
    mvc.perform(get("/api/admin/data/state").session(session)).andExpect(jsonPath("$.scenarioVersion").value(1));
   } finally {db.execute("ALTER TABLE penny_catalog_products DROP CONSTRAINT test_expanded_failure");}
+ }
+
+ @Test void historicalUpgradePreservesVersionTwoAndRealRowsAndIsIdempotent() throws Exception {
+  MockHttpSession session=login(email,PASSWORD);
+  long real=db.queryForObject("INSERT INTO penny_customers(kind,name,notes) VALUES ('COMPANY','Real untouched history','keep') RETURNING id",Long.class);
+  long product=db.queryForObject("INSERT INTO penny_catalog_products(code,name,category,origin) VALUES ('REAL-HISTORY','Real product','HARDWARE','THIRD_PARTY') RETURNING id",Long.class);
+  long sale=db.queryForObject("INSERT INTO penny_sales(customer_id,catalog_product_id,product_code,product_name,origin,category,sold_on,quantity,unit_price,reference) VALUES (?,?,'REAL-HISTORY','Real product','THIRD_PARTY','HARDWARE','2020-01-02',1,42,'REAL-ORDER') RETURNING id",Long.class,real,product);
+  db.update("INSERT INTO penny_demo_environment(id,actor,scenario_version) VALUES (1,?,2)",email);
+  mvc.perform(get("/api/admin/data/state").session(session)).andExpect(jsonPath("$.demoUpgradeAvailable").value(true));
+  for(int i=0;i<2;i++)mvc.perform(secured(post("/api/admin/data/demo"),csrf()).session(session).contentType(MediaType.APPLICATION_JSON).content("{\"confirm\":true}")).andExpect(status().isOk()).andExpect(jsonPath("$.scenarioVersion").value(3));
+  assertEquals(48,db.queryForObject("SELECT count(*) FROM penny_customers WHERE name LIKE '[DEMO] E3 %'",Integer.class));
+  assertEquals(0,db.queryForObject("SELECT count(*) FROM penny_customers WHERE name LIKE '[DEMO] E2 %'",Integer.class));
+  assertEquals("keep",db.queryForObject("SELECT notes FROM penny_customers WHERE id=?",String.class,real));
+  assertEquals("2020-01-02",db.queryForObject("SELECT sold_on::text FROM penny_sales WHERE id=? AND order_id IS NULL",String.class,sale));
+  assertTrue(db.queryForObject("SELECT count(*) FROM penny_sales WHERE reference LIKE 'E3-%'",Integer.class)>2000);
+  assertTrue(db.queryForObject("SELECT max(sold_on)-min(sold_on) FROM penny_sales WHERE reference LIKE 'E3-%'",Integer.class)>=729);
+  assertTrue(db.queryForObject("SELECT count(DISTINCT sold_on) FROM penny_sales WHERE reference LIKE 'E3-%'",Integer.class)>=730);
+  assertTrue(db.queryForObject("SELECT count(DISTINCT date_trunc('month',first_sale)) FROM (SELECT min(sold_on) first_sale FROM penny_sales WHERE reference LIKE 'E3-%' AND status='CONFIRMED' GROUP BY customer_id) t",Integer.class)>=24);
+  assertEquals(4,db.queryForObject("SELECT count(DISTINCT category) FROM penny_sales WHERE reference LIKE 'E3-%'",Integer.class));
+  assertTrue(db.queryForObject("SELECT count(*) FROM penny_sales WHERE reference LIKE 'E3-%' AND status='CANCELLED'",Integer.class)>0);
+  assertEquals(0,db.queryForObject("SELECT count(*) FROM penny_sales s JOIN penny_sales_orders o ON o.id=s.order_id WHERE s.reference LIKE 'E3-%' AND (s.customer_id<>o.customer_id OR s.sold_on<>o.sold_on OR s.status<>o.status)",Integer.class));
+  assertTrue(db.queryForObject("SELECT count(*) FROM penny_customer_records WHERE name LIKE '[DEMO] E3 %'",Integer.class)>=730);
+  assertEquals(0,db.queryForObject("SELECT count(*) FROM penny_catalog_products WHERE code LIKE 'E3-%' AND margin_management<>'NONE'",Integer.class));
+  assertEquals(0,db.queryForObject("SELECT count(*) FROM penny_record_tasks t JOIN penny_customer_records r ON r.id=t.record_id WHERE r.name LIKE '[DEMO] E3 %' AND r.kind NOT IN ('TECHNICAL','DEVELOPMENT')",Integer.class));
+  assertEquals(4,db.queryForObject("SELECT count(DISTINCT details->>'contractType') FROM penny_customer_records WHERE name LIKE '[DEMO] E3 %' AND kind='CONTRACT'",Integer.class));
+  assertTrue(db.queryForObject("SELECT count(*) FROM penny_customer_records WHERE name LIKE '[DEMO] E3 %' AND kind='CONTRACT' AND status='ACTIVE' AND details->>'contractType' IN ('PHONE','PHONE_UPDATES','HOURLY')",Integer.class)>0);
+  assertTrue(db.queryForObject("SELECT count(*) FROM penny_record_interventions l JOIN penny_customer_records p ON p.id=l.record_id JOIN penny_customer_records i ON i.id=l.intervention_id WHERE p.name LIKE '[DEMO] E3 %' AND p.kind='TECHNICAL' AND i.kind='INTERVENTION' AND i.customer_id=p.customer_id AND i.details->>'activityOn'=i.starts_on::text AND i.reference ~ '^[0-9]{2}[.]RI[.][0-9]+$'",Integer.class)>100);
+
+ }
+ @Test void failedHistoricalUpgradeKeepsVersionTwoMarker() throws Exception {
+  MockHttpSession session=login(email,PASSWORD);
+  db.update("INSERT INTO penny_demo_environment(id,actor,scenario_version) VALUES (1,?,2)",email);
+  db.execute("ALTER TABLE penny_catalog_products ADD CONSTRAINT test_history_failure CHECK(code NOT LIKE 'E3-%')");
+  try {
+   assertThrows(jakarta.servlet.ServletException.class,()->mvc.perform(secured(post("/api/admin/data/demo"),csrf()).session(session).contentType(MediaType.APPLICATION_JSON).content("{\"confirm\":true}")));
+   assertEquals(0,db.queryForObject("SELECT count(*) FROM penny_customers WHERE name LIKE '[DEMO] E3 %'",Integer.class));
+   assertEquals(2,db.queryForObject("SELECT scenario_version FROM penny_demo_environment WHERE id=1",Integer.class));
+  } finally {db.execute("ALTER TABLE penny_catalog_products DROP CONSTRAINT test_history_failure");}
  }
 
 }
