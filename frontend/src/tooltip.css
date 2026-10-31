@@ -1,3 +1,3 @@
-.control-tooltip{position:fixed;z-index:100;box-sizing:border-box;width:max-content;max-width:min(260px,calc(100vw - 16px));padding:8px 10px;border-radius:7px;background:#183b4e;color:white;font-size:12px;font-weight:500;line-height:1.5;white-space:normal;text-align:left;pointer-events:none}
+.control-tooltip{position:fixed;z-index:100;box-sizing:border-box;width:max-content;max-width:min(260px,calc(100vw - 16px));padding:8px 10px;border-radius:7px;background:var(--ui-surface-raised);color:var(--ui-on-accent);font-size:12px;font-weight:500;line-height:1.5;white-space:normal;text-align:left;pointer-events:none}
 .penny-shell button.organization-icon-control{display:inline-flex;align-items:center;justify-content:center;flex:none;min-width:44px;min-height:44px;padding:10px}
 .penny-shell button.organization-icon-control svg{width:20px;height:20px}
