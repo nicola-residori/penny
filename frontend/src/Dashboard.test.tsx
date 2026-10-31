@@ -24,3 +24,16 @@ it('preserves cents in large commercial totals',async()=>{
  render(<Dashboard name="Ada" profile={{canReadSales:true}} onNavigate={()=>{}}/>);
  expect(await screen.findByText(/999.*01/)).toBeTruthy();
 });
+it('uses the approved overview composition and opens real customer actions',async()=>{
+ vi.stubGlobal('fetch',vi.fn(async(input:RequestInfo|URL)=>({ok:true,json:async()=>String(input).startsWith('/api/customers')?{items:[{id:4,name:'Aurora',lifecycleStatus:'CUSTOMER',city:'Verona'}],total:1}:String(input).includes('deadlines')?{items:[{customerId:4,customerName:'Aurora',productName:'Licenza CAD',date:'2026-11-04',type:'LICENSE'}]}:{}})));
+ const open=vi.fn();render(<Dashboard name="Ada" profile={{canReadCustomers:true,canWriteCustomers:true,canReadProducts:true}} onNavigate={()=>{}} onOpenCustomer={open}/>);
+ expect(screen.getByRole('heading',{name:'Panoramica',level:1})).toBeTruthy();await userEvent.click(screen.getByRole('button',{name:'Nuovo cliente'}));expect(open).toHaveBeenCalledWith(null);
+ await userEvent.click(await screen.findByRole('button',{name:'Aurora'}));expect(open).toHaveBeenCalledWith(4);
+ expect(screen.getByRole('region',{name:'Prossime scadenze'})).toBeTruthy();
+});
+it('retains applied draft and comparison when dashboard data refreshes after closing a dossier',async()=>{
+ vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>({})})));
+ const props={name:'Ada',profile:{canReadSales:true},onNavigate:vi.fn()};const v=render(<Dashboard {...props} revision={0}/>);
+ await userEvent.clear(screen.getByLabelText('Span'));await userEvent.type(screen.getByLabelText('Span'),'2d');await userEvent.click(screen.getByRole('switch'));
+ v.rerender(<Dashboard {...props} revision={1}/>);expect((screen.getByLabelText('Span') as HTMLInputElement).value).toBe('2d');expect((screen.getByRole('switch') as HTMLInputElement).checked).toBe(true);
+});
