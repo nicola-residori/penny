@@ -14,6 +14,9 @@ export function Input({className,type='text',...props}:React.ComponentPropsWithR
 export function SearchInput({className,type='search',...props}:React.ComponentPropsWithRef<'input'>){
  return <Input {...props} type={type} className={classes('ui-search-input',className)}/>;
 }
+export function SearchControl({label,labelHidden=false,className,...props}:React.ComponentPropsWithRef<'input'>&{label:React.ReactNode;labelHidden?:boolean}){
+ return <label className={classes('ui-search-control',labelHidden&&'ui-search-control--label-hidden')}><span className="ui-search-control-label">{label}</span><SearchInput {...props} className={className}/></label>;
+}
 export function Select({className,...props}:React.ComponentPropsWithRef<'select'>){
  return <select {...props} className={classes('ui-select',className)}/>;
 }
