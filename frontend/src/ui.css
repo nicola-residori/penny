@@ -39,3 +39,10 @@
 
 :root :is(.penny-shell,.detail-modal,.penny-auth-card) button.ui-button.selected:not(.ui-button--content),:root :is(.penny-shell,.detail-modal,.penny-auth-card) button.ui-button.active:not(.ui-button--content){background:var(--ui-accent-soft);border-color:var(--ui-accent);color:var(--ui-accent)}
 :root :is(.penny-shell,.detail-modal,.penny-auth-card) input.ui-input[type=file]{height:auto;min-height:44px;padding:6px}
+/* List search follows the approved Contacts field: label above one outlined input. */
+:root .ui-search-field{display:block;flex:0 1 198px;width:198px;max-width:100%;margin:0;padding:0;border:0;background:transparent}
+:root .ui-search-field>label{display:grid;gap:7px;margin:0;font-size:13px;font-weight:600;color:var(--ui-text)}
+:root .ui-search-field .ui-search-input{width:100%;height:44px;min-height:44px;border:1px solid var(--ui-line);border-radius:6px;padding:10px 12px;background:var(--ui-surface);color:var(--ui-text);font-size:14px}
+.penny-toolbar:has(>.ui-search-field){align-items:flex-end}
+@media(max-width:700px){:root .ui-search-field .ui-search-input{font-size:16px}}
+:root .ui-search-field,:root .ui-search-field>label,:root .ui-search-field .ui-search-input{min-width:0}
