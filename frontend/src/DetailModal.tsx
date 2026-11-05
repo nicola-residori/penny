@@ -1,3 +1,4 @@
+import {Button} from './ui';
 import React,{useId,useLayoutEffect,useRef} from 'react';
 import './detail-modal.css';
 let locks=0,previousOverflow='';
@@ -19,5 +20,5 @@ export default function DetailModal({open,title,onClose,children}:{open:boolean;
    const controls=Array.from(dialog.current?.querySelectorAll<HTMLElement>('button:not(:disabled),a[href],input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex="0"]')||[]).filter(el=>!el.closest('[hidden]')&&el.getAttribute('aria-hidden')!=='true');
    const first=controls[0],last=controls.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}
   }
- }}><header className="detail-modal-header"><h2 id={id}>{title}</h2><button type="button" className="detail-modal-close penny-button-secondary" aria-label={'Chiudi '+title} onClick={()=>close.current()}><span aria-hidden="true">×</span></button></header><div className="detail-modal-body">{children}</div></dialog>;
+ }}><header className="detail-modal-header"><h2 id={id}>{title}</h2><Button type="button" className="detail-modal-close penny-button-secondary" aria-label={'Chiudi '+title} onClick={()=>close.current()} variant="secondary"><span aria-hidden="true">×</span></Button></header><div className="detail-modal-body">{children}</div></dialog>;
 }

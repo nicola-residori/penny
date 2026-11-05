@@ -30,3 +30,8 @@ A uses an open KPI strip and side-by-side analysis. C emphasizes commercial anal
 
 ## Verification/deployment
 Build and frontend tests run only on CT111. Browser rendering uses the compiled actual app with intercepted fixture API responses in an isolated candidate container: no fixture data enters production. Production deployment changes only the frontend image; backend/database and Proxmox configuration remain untouched.
+
+## Shared React controls (5November2026)
+`frontend/src/ui.tsx` is the native-control boundary: Button, Input, SearchInput, Select, Textarea, Table. All feature TSX uses these components. Native events, refs, required/min/max/disabled and implicit submit semantics are forwarded unchanged. Button variants: primary, secondary, danger, ghost; `presentation="content"` is for nav items, tabs, sort headings and clickable entities. Table owns the scroll container and cell/header presentation; ResourceTable still owns sorting, column preferences, filtering, selection, pagination and XLSX. SearchField and LookupSelect compose the shared input/select primitives.
+
+`frontend/src/ui.css`, loaded after the theme and feature styles, owns control appearance in both approved themes. Feature CSS should own layout and content, and use variants for color. New controls should specify an explicit native button type when appropriate. `npm run check:ui` rejects raw native controls outside ui.tsx and is included in the frontend build; no additional dependency is required.

@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
-    "test": "vitest run"
+    "build": "npm run check:ui && tsc -b && vite build",
+    "test": "vitest run",
+    "check:ui": "node scripts/check-ui.mjs"
   },
   "dependencies": {
     "react": "^19.0.0",

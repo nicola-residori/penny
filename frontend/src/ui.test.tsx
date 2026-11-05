@@ -1,0 +1,10 @@
+// @vitest-environment jsdom
+import React,{createRef} from 'react';
+import {afterEach,it,expect,vi} from 'vitest';
+import {render,screen,cleanup} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import {Button,Input,SearchInput,Select,Textarea,Table} from './ui';
+afterEach(cleanup);
+it('preserves submit semantics, disabled state and native refs',async()=>{const ref=createRef<HTMLButtonElement>(),submit=vi.fn((e:React.FormEvent)=>e.preventDefault());render(<form onSubmit={submit}><Button ref={ref} variant="primary">Salva</Button><Button type="button" disabled>Bloccato</Button></form>);await userEvent.click(screen.getByRole('button',{name:'Salva'}));expect(submit).toHaveBeenCalledTimes(1);expect(ref.current?.tagName).toBe('BUTTON');expect((screen.getByRole('button',{name:'Bloccato'}) as HTMLButtonElement).disabled).toBe(true)});
+it('retains native input, lookup and validation contracts',async()=>{const change=vi.fn();render(<><label>Nome<Input required maxLength={4} onChange={change}/></label><label>Cliente<Select defaultValue="2"><option value="1">Alfa</option><option value="2">Beta</option></Select></label><label>Note<Textarea maxLength={100}/></label><SearchInput aria-label="Ricerca"/></>);await userEvent.type(screen.getByLabelText('Nome'),'Mario');expect((screen.getByLabelText('Nome') as HTMLInputElement).value).toBe('Mari');expect(change).toHaveBeenCalledTimes(4);expect((screen.getByLabelText('Cliente') as HTMLSelectElement).value).toBe('2');expect(screen.getByRole('searchbox',{name:'Ricerca'})).toBeTruthy()});
+it('preserves table captions, headers, custom row content and keyboard controls',async()=>{const open=vi.fn();render(<Table><caption>Clienti</caption><thead><tr><th scope="col">Nome</th></tr></thead><tbody><tr><td><Button presentation="content" onClick={open}>Aurora</Button></td></tr></tbody></Table>);expect(screen.getByRole('table',{name:'Clienti'})).toBeTruthy();await userEvent.click(screen.getByRole('button',{name:'Aurora'}));expect(open).toHaveBeenCalledTimes(1)});

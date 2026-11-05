@@ -1,3 +1,4 @@
+import {Button,Input} from './ui';
 import React,{useEffect,useState} from 'react';
 import Icon,{type IconName} from './Icons';
 import {api} from './api';
@@ -28,6 +29,6 @@ export default function EntityImageEditor({kind,id,label,hasImage,hasOwnImage=ha
  async function remove(){if(busy)return;setBusy(true);setError('');try{const state=await api<ImageState>(imageUrl(kind,id),'DELETE');setVersion(Date.now());onChanged(state);}catch(e){setError(e instanceof Error?e.message:String(e));}finally{setBusy(false);}}
  return <div className="entity-image-editor">{hasImage?<img src={imageUrl(kind,id,imageVersion)} alt={label}/>:<p>Nessuna immagine. Verranno mostrate le iniziali o l’icona della scheda.</p>}
  {kind==='installed-products'&&hasImage&&!hasOwnImage&&<p>Immagine ereditata dal catalogo. Puoi caricarne una specifica per questa installazione.</p>}
- {canWrite&&<div className="entity-image-controls"><label className="entity-image-upload">{hasOwnImage?'Sostituisci immagine':'Carica immagine'}<input type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={e=>{void upload(e.target.files?.[0]);e.target.value='';}}/></label><small>PNG, JPEG o WEBP · massimo 5 MB</small>{hasOwnImage&&<button type="button" className="penny-button-secondary" disabled={busy} onClick={()=>void remove()}>{kind==='installed-products'?'Rimuovi immagine personalizzata':'Rimuovi immagine'}</button>}</div>}
+ {canWrite&&<div className="entity-image-controls"><label className="entity-image-upload">{hasOwnImage?'Sostituisci immagine':'Carica immagine'}<Input type="file" accept="image/png,image/jpeg,image/webp" disabled={busy} onChange={e=>{void upload(e.target.files?.[0]);e.target.value='';}}/></label><small>PNG, JPEG o WEBP · massimo 5 MB</small>{hasOwnImage&&<Button type="button" className="penny-button-secondary" disabled={busy} onClick={()=>void remove()} variant="secondary">{kind==='installed-products'?'Rimuovi immagine personalizzata':'Rimuovi immagine'}</Button>}</div>}
  {busy&&<p role="status">Aggiornamento immagine…</p>}{error&&<p role="alert">{error}</p>}</div>;
 }

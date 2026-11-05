@@ -1,3 +1,4 @@
+import {Button,Input} from './ui';
 import React,{useEffect,useState} from 'react';
 import {api} from './api';
 import './demo-data.css';
@@ -16,9 +17,9 @@ export default function DemoDataPanel({canManageData}:{canManageData:boolean}){
  {error&&<p role="alert">{error}</p>}{message&&<p role="status">{message}</p>}
  {!state&&!error&&<p>Caricamento conteggi…</p>}
  {state&&<><p className="demo-counts">{Object.entries(state.counts).map(([label,count])=><span key={label}>{countLabels[label]||label}: {count}</span>)}</p>
- <button disabled={busy||(state.demoLoaded&&(state.scenarioVersion??1)>=3)} onClick={()=>void perform('demo')}>{state.demoLoaded?((state.scenarioVersion??1)>=3?'Demo aggiornata':'Amplia dati demo'):'Carica dati demo'}</button><p>{state.demoLoaded&&(state.scenarioVersion??1)>=3?'Storico biennale attivo: vendite e attività giornaliere, nuovi clienti mensili, stagionalità e confronti annuali.':'Il dataset include due anni di vendite e attività giornaliere, clienti acquisiti ogni mese, multisede e contatti condivisi.'}</p>
+ <Button disabled={busy||(state.demoLoaded&&(state.scenarioVersion??1)>=3)} onClick={()=>void perform('demo')} variant="secondary">{state.demoLoaded?((state.scenarioVersion??1)>=3?'Demo aggiornata':'Amplia dati demo'):'Carica dati demo'}</Button><p>{state.demoLoaded&&(state.scenarioVersion??1)>=3?'Storico biennale attivo: vendite e attività giornaliere, nuovi clienti mensili, stagionalità e confronti annuali.':'Il dataset include due anni di vendite e attività giornaliere, clienti acquisiti ogni mese, multisede e contatti condivisi.'}</p>
  <div className="demo-reset"><h3>Azzera ambiente CRM</h3><p>Operazione irreversibile: elimina tutti i dati aziendali, anche quelli non demo: clienti e prospect, contatti, sedi, catalogo, vendite, allocazioni, installazioni, gruppi hardware, formazione, contratti, sviluppi, attività, ordini, documenti, notifiche, rinnovi, dati e storico delle regole di margine e cestino. Conserva utenti, ruoli e permessi, categorie e tipologie di configurazione e lo storico tecnico di audit.</p>
- <label>Scrivi RESET per confermare<input value={confirmation} onChange={e=>setConfirmation(e.target.value)} disabled={busy}/></label>
- <button className="penny-button-danger-quiet" disabled={busy||confirmation!=='RESET'} onClick={()=>void perform('reset')}>Azzera dati CRM</button></div></>}
+ <label>Scrivi RESET per confermare<Input value={confirmation} onChange={e=>setConfirmation(e.target.value)} disabled={busy}/></label>
+ <Button className="penny-button-danger-quiet" disabled={busy||confirmation!=='RESET'} onClick={()=>void perform('reset')} variant="danger">Azzera dati CRM</Button></div></>}
  {busy&&<p role="status">Operazione in corso…</p>}</section>;
 }
