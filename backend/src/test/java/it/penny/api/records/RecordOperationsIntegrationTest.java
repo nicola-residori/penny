@@ -67,4 +67,13 @@ class RecordOperationsIntegrationTest {
   mvc.perform(post("/api/choices").principal(none).contentType(APPLICATION_JSON).content("{\"group\":\"TEST\",\"code\":\"A\",\"label\":\"Uno\"}")).andExpect(status().isForbidden());
  }
  @Test void fieldValidationKeepsDatesAndCountsStrict(){var json=new com.fasterxml.jackson.databind.ObjectMapper();assertThrows(org.springframework.web.server.ResponseStatusException.class,()->CustomerRecordService.validateDetails("TRAINING",json.readTree("{\"courseMonth\":13}")));assertThrows(org.springframework.web.server.ResponseStatusException.class,()->CustomerRecordService.validateDetails("INTERVENTION",json.readTree("{\"startTime\":\"12:00\",\"endTime\":\"10:00\"}")));}
+ @Test void coverageDistinguishesMissingExpiredActiveAndSuspendedWithoutLeakingContractDetails()throws Exception{
+  mvc.perform(get("/api/customers/1/support-coverage").principal(admin)).andExpect(jsonPath("$.status").value("NONE"));
+  db.update("INSERT INTO penny_customer_records(id,customer_id,kind,name,status,starts_on,expires_on,details) VALUES (55,1,'CONTRACT','Contratto riservato','ACTIVE',current_date-60,current_date-1,'{\"contractType\":\"PHONE\"}')");
+  mvc.perform(get("/api/customers/1/support-coverage").principal(admin)).andExpect(jsonPath("$.status").value("EXPIRED")).andExpect(jsonPath("$.expiredOn").isNotEmpty()).andExpect(jsonPath("$.hasSupport").value(false)).andExpect(jsonPath("$.name").doesNotExist());
+  db.update("UPDATE penny_customer_records SET expires_on=current_date+30 WHERE id=55");mvc.perform(get("/api/customers/1/support-coverage").principal(admin)).andExpect(jsonPath("$.status").value("ACTIVE")).andExpect(jsonPath("$.hasSupport").value(true));
+  db.update("UPDATE penny_customer_records SET status='SUSPENDED' WHERE id=55");mvc.perform(get("/api/customers/1/support-coverage").principal(admin)).andExpect(jsonPath("$.status").value("SUSPENDED")).andExpect(jsonPath("$.hasSupport").value(false));
+  db.update("UPDATE penny_customer_records SET status='ACTIVE',starts_on=current_date+2,expires_on=current_date+40 WHERE id=55");mvc.perform(get("/api/customers/1/support-coverage").principal(admin)).andExpect(jsonPath("$.status").value("NOT_STARTED"));
+ }
+
 }

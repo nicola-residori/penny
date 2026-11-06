@@ -27,3 +27,9 @@ Il file `backend/src/main/resources/demo/seed-support-demo.sql` aggiunge soltant
 Lo script è transazionale e ripetibile: non duplica i casi e non sovrascrive le modifiche fatte alle chiamate già caricate. Le nuove aziende sono prospect fino alla prima vendita, come previsto dal CRM. Il reset totale amministrativo comprende questi dati. Il test `SupportDemoSeedTest` verifica quantità, stati, associazioni, notifiche, ripetibilità e conservazione di un'anagrafica preesistente.
 
 Sul server viene conservata una copia operativa in `/opt/penny/scripts/seed-support-demo.sql`. Il caricamento esplicito è preceduto da backup verificato e controllo delle impronte dei dati non demo. La presenza del file nelle risorse backend non lo esegue automaticamente all'avvio.
+
+## Avviso contratto all'apertura
+
+Nel modulo di registrazione, appena viene scelto il cliente, e nel dettaglio della chiamata compare la copertura attuale: attiva, scaduta (con data se disponibile), assente, sospesa, futura o inattiva. Il controllo usa le stesse regole di copertura telefonica/oraria già presenti nella scheda cliente e considera i rinnovi efficaci. È un avviso informativo, non impedisce la registrazione. In caso di verifica non disponibile viene dichiarato l'errore, senza presentare il cliente come coperto. La copertura mostrata è attuale, non una ricostruzione di quella esistente alla data di una chiamata storica.
+
+Il file `backend/src/main/resources/demo/seed-support-coverage.sql` aggiunge, alle sole aziende del dataset tele-assistenza, contratti demo per Alfa (attivo), Beta (scaduto), Delta (sospeso); Gamma rimane senza contratto. È additivo e ripetibile e non modifica contratti esistenti.
