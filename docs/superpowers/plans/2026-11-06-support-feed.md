@@ -1,0 +1,7 @@
+# Tele-assistenze condivise e notifiche
+
+Richiesta: tutti gli utenti autenticati vedono chiamate in corso, notifica al tecnico assegnato. Vista operativa globale con cliente/richiedente/tecnico/apertura/riferimento; dati storici, note, email e modifiche conservano RBAC attuale. Header comune con conteggio attive e campanella personale, modali comuni, aggiornamento ogni 15 s quando visibile e al focus; aggiornamento immediato dopo operazioni locali. Toast in-app per nuove assegnazioni; nessuna email o notifica OS.
+
+V134 aggiunge il collegamento notifica→chiamata e notifica le chiamate già aperte. Inserimento in transazione con la creazione, vincolo univoco per assegnazione; chiusura marca letta, annullamento rimuove la notifica. Feed privato delle assegnazioni e marcatura lettura solo per il destinatario. Paginazione bacheca, prime 20 notifiche non lette. Test permessi ridotti/vista limitata, isolamento destinatario, transazioni e ciclo chiusura/cancellazione; frontend/polling/indicatori. Build/test su CT111 isolato, backup prima del rilascio e branch senza merge.
+
+Estensione richiesta durante lo sviluppo: elenco della giornata selezionabile, ordine più recente prima, fascia separata sempre visibile con tutte le chiamate ancora aperte (paginazione se numerose), timer locale a secondi e tecnico; riepiloghi annuali spostati sotto l'elenco e indipendenti dalla giornata. Anche la navigazione Tele-assistenza è accessibile agli account con permessi ridotti, limitata alla sola bacheca operativa.
