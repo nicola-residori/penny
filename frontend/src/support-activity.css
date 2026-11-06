@@ -3,3 +3,15 @@
 .penny-topbar{flex-wrap:wrap;row-gap:10px}.support-annual{display:grid;gap:20px}.support-annual>label{display:grid;gap:7px;width:160px}
 
 .support-running-grid article>div>strong{overflow-wrap:anywhere;min-width:0;flex:1}.support-activity .support-toast>strong{display:block;padding-right:24px}
+/* Keep the shared header readable when live controls are present. */
+.penny-shell .penny-topbar:has(.support-activity){height:auto;min-height:74px;padding-top:10px;padding-bottom:10px;flex-wrap:wrap}
+.penny-shell .penny-topbar:has(.support-activity) .penny-breadcrumb{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:700px){
+ .penny-shell .penny-topbar:has(.support-activity){position:relative;display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:8px;min-height:116px;padding:10px 12px}
+ .penny-shell .penny-topbar:has(.support-activity) .penny-menu-toggle{grid-column:1;grid-row:1}
+ .penny-shell .penny-topbar:has(.support-activity) .penny-breadcrumb{grid-column:2;grid-row:1;min-width:0}
+ .penny-shell .penny-topbar:has(.support-activity) .penny-logout{grid-column:3;grid-row:1;justify-self:end}
+ .penny-shell .penny-topbar:has(.support-activity) .support-activity{grid-column:1/3;grid-row:2}
+ .penny-shell .penny-topbar:has(.support-activity) .penny-theme-selector{grid-column:3;grid-row:2}
+ .penny-shell .penny-topbar:has(.support-activity) #dashboard-search-slot{top:calc(100% + 14px)}
+}
