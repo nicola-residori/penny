@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "npm run check:ui && tsc -b && vite build",
-    "test": "vitest run",
-    "check:ui": "node scripts/check-ui.mjs"
+    "test": "vitest run && npm run test:outlook",
+    "check:ui": "node scripts/check-ui.mjs",
+    "test:outlook": "node --test outlook.contract.mjs"
   },
   "dependencies": {
     "react": "^19.0.0",

@@ -1,0 +1,11 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';
+import {extractMessage,chooseMatch} from './public/outlook/core.js';
+const callback=value=>(...args)=>args.at(-1)({status:'succeeded',value});
+const item=()=>({itemId:'one',subject:'Oggetto à',from:{emailAddress:'sender@example.org'},to:[{emailAddress:'client@example.org'}],cc:[],dateTimeCreated:new Date('2026-11-06'),internetMessageId:'<unique>',conversationId:'thread',body:{getAsync:callback('Test <script>not active</script>')},attachments:[{id:'file',name:'offerta.pdf'}],getAttachmentContentAsync:callback({format:'base64',content:'AAEC'})});
+test('exact matching never chooses an ambiguous shared contact',()=>{assert.equal(chooseMatch([{id:1,matched:true},{id:2,matched:true}]),'');assert.equal(chooseMatch([{id:1,matched:true}]),'1');assert.equal(chooseMatch([{id:1,matched:false}]),'');});
+test('extracts original EML and exact binary attachments',async()=>{const m=item();m.getAsFileAsync=callback('ZW1s');const result=await extractMessage(m,'me@example.org');assert.equal(result.originalKind,'EML');assert.equal(result.attachments[0].contentBase64,'AAEC');assert.equal(result.originalBase64,'ZW1s');assert.equal(result.internetMessageId,'<unique>');});
+test('older Outlook gets explicitly marked reconstructed MIME with attachments',async()=>{const r=await extractMessage(item(),'me@example.org');assert.equal(r.originalKind,'GENERATED');const eml=Buffer.from(r.originalBase64,'base64').toString();assert.match(eml,/multipart\/mixed/);assert.match(eml,/AAEC/);});
+test('cloud or unavailable attachment aborts entire message',async()=>{const m=item();m.getAttachmentContentAsync=callback({format:'url',content:'https://example.org/private'});await assert.rejects(extractMessage(m,'me@example.org'),/Allegato non scaricabile/);});
+test('original export failure is not silently replaced',async()=>{const m=item();m.getAsFileAsync=cb=>cb({status:'failed',error:{message:'Protected message'}});await assert.rejects(extractMessage(m,'me@example.org'),/Protected message/);});
+
+test('API exposed but unsupported uses reconstructed copy without invoking it',async()=>{const m=item();m.getAsFileAsync=()=>{throw Error("must not call unsupported API")};const r=await extractMessage(m,"me@example.org",{exportOriginal:false});assert.equal(r.originalKind,"GENERATED");});

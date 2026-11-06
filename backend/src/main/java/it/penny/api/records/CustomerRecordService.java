@@ -82,6 +82,7 @@ public class CustomerRecordService {
   if(input==null||input.customerId()==null)throw bad("Cliente obbligatorio");require(auth,permission(input.kind())+"_WRITE");
   if(current!=null&&!Objects.equals(current.get("kind"),input.kind()))throw bad("Il tipo della scheda non è modificabile");
   if(current==null||!Objects.equals(current.get("customerId"),input.customerId()))require(auth,"CUSTOMERS_READ");
+  if(current!=null&&!Objects.equals(current.get("customerId"),input.customerId())&&db.queryForObject("SELECT count(*) FROM penny_mail_record_links WHERE record_id=?",Long.class,current.get("id"))>0)throw bad("Scollega prima le email per spostare l’attività a un altro cliente");
   if(current!=null&&!Objects.equals(current.get("customerId"),input.customerId())&&db.queryForObject("SELECT count(*) FROM penny_record_interventions WHERE record_id=? OR intervention_id=?",Integer.class,current.get("id"),current.get("id"))>0)throw bad("Rimuovi prima i collegamenti agli interventi per cambiare cliente");
   if(db.queryForObject("SELECT count(*) FROM penny_customers WHERE id=? AND deleted_at IS NULL",Integer.class,input.customerId())==0)throw bad("Cliente inesistente");
   if(input.siteId()!=null&&db.queryForObject("SELECT count(*) FROM penny_customer_sites WHERE id=? AND customer_id=?",Integer.class,input.siteId(),input.customerId())==0)throw bad("Sede di un altro cliente");

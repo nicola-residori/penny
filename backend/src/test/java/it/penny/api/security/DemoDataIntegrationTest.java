@@ -48,7 +48,7 @@ class DemoDataIntegrationTest {
  @BeforeEach void setup(){
   mvc=MockMvcBuilders.webAppContextSetup(context).addFilters(security).build();
   db.execute("TRUNCATE penny_users CASCADE");
-  db.execute("TRUNCATE penny_documents,penny_notifications,penny_record_tasks,penny_record_interventions,penny_contract_renewals,penny_margin_events,penny_margin_snapshots,penny_margin_rule_audit,penny_margin_rules,penny_margin_profiles,penny_sales_orders,penny_record_participants,penny_customer_records,penny_sale_allocations,penny_sales,penny_installed_products,penny_workstations,penny_contact_customers,penny_customer_contacts,penny_customer_sites,penny_catalog_products,penny_customers,penny_trash_entries,penny_demo_environment,penny_m2_audit RESTART IDENTITY");
+  db.execute("TRUNCATE penny_mail_record_links,penny_mail_comments,penny_mail_attachments,penny_mail_messages,penny_documents,penny_notifications,penny_record_tasks,penny_record_interventions,penny_contract_renewals,penny_margin_events,penny_margin_snapshots,penny_margin_rule_audit,penny_margin_rules,penny_margin_profiles,penny_sales_orders,penny_record_participants,penny_customer_records,penny_sale_allocations,penny_sales,penny_installed_products,penny_workstations,penny_contact_customers,penny_customer_contacts,penny_customer_sites,penny_catalog_products,penny_customers,penny_trash_entries,penny_demo_environment,penny_m2_audit RESTART IDENTITY");
   email="readme-"+UUID.randomUUID()+"@test.invalid";
   db.update("INSERT INTO penny_users(email,full_name,password_hash,must_change_password) VALUES (?,'README',?,false)",email,encoder.encode(PASSWORD));
   db.update("INSERT INTO penny_user_roles SELECT u.id,r.id FROM penny_users u CROSS JOIN penny_roles r WHERE u.email=? AND r.code='ADMIN'",email);
