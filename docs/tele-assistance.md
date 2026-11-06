@@ -35,3 +35,5 @@ Nel modulo di registrazione, appena viene scelto il cliente, e nel dettaglio del
 Il file `backend/src/main/resources/demo/seed-support-coverage.sql` aggiunge, alle sole aziende del dataset tele-assistenza, contratti demo per Alfa (attivo), Beta (scaduto), Delta (sospeso); Gamma rimane senza contratto. È additivo e ripetibile e non modifica contratti esistenti.
 
 Tutte le modifiche della tele-assistenza sono riservate all’assegnatario, anche per gli amministratori: chiusura, riassegnazione, commenti, annullamento delle chiamate aperte e collegamento/scollegamento email. Gli altri utenti autorizzati mantengono la consultazione. I controlli API bloccano e verificano la riga della chiamata per evitare modifiche concorrenti dopo una riassegnazione.
+
+Durate e totali sono sempre espressi in HH:MM:SS (anche oltre 24 ore), con timer sulle chiamate aperte. Il nome cliente in schede, elenchi e dettagli apre la scheda cliente sul tab Tele-assistenza, rispettando i permessi di lettura; il collegamento supporta anche l’apertura in un’altra scheda del browser.

@@ -1,0 +1,1 @@
+export function supportDuration(value:number){const seconds=Number.isFinite(value)?Math.max(0,Math.floor(value)):0;return [Math.floor(seconds/3600),Math.floor(seconds/60)%60,seconds%60].map(n=>String(n).padStart(2,'0')).join(':');}

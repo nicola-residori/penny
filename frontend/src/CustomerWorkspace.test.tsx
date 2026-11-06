@@ -61,3 +61,5 @@ it('shows the reference overview panels and separate software and hardware summa
  expect(screen.getByRole('heading',{name:'Hardware'})).toBeTruthy();
  expect(screen.getByText('120')).toBeTruthy();expect(screen.getByText('30')).toBeTruthy();
 });
+
+it('preselects the support tab only with its read permission',async()=>{vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>({sites:[],products:[],deadlines:[],productsTotal:0})})));render(<CustomerWorkspace customerId={4} initialTab="Tele-assistenza" canReadActivities canWrite={false} anagrafica={<p>Dati</p>} contacts={<p>Referenti</p>}/>);expect(screen.getByRole('tab',{name:'Tele-assistenza'}).getAttribute('aria-selected')).toBe('true');});
