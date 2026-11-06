@@ -3,3 +3,8 @@
 .support-chart-card{min-width:0}.support-detail section{min-width:0}
 
 .support-summary{padding:20px;border:1px solid var(--ui-line);border-radius:10px;background:var(--ui-surface);margin-bottom:20px}.support-year{display:grid;gap:7px;width:160px}
+.support-summary{cursor:pointer}:root .support-summary .support-summary-title{font-size:inherit;font-weight:inherit;color:inherit;padding:0;min-height:44px;background:transparent;border:0;text-align:left}.support-summary:has(.support-summary-title:focus-visible){outline:2px solid var(--ui-accent);outline-offset:2px}
+.support-year-chart{display:grid;gap:16px;min-width:0}.support-year-chart>label{display:grid;gap:7px;width:160px}
+:root .support-chart .support-month{display:grid;grid-template-rows:20px 130px 22px;gap:8px;padding:4px 0;border:0;background:transparent;font-size:11px;line-height:1.3;font-weight:500;color:var(--ui-text);min-height:0;text-align:center;border-radius:4px}
+.support-chart{grid-template-columns:repeat(12,minmax(50px,1fr))}.support-month-totals{white-space:nowrap;font-size:10px;font-weight:600}.support-month-bars{display:flex;align-items:flex-end;justify-content:center;gap:4px;height:130px}.support-received-bar{width:40%;display:block;border-radius:2px 2px 0 0}.support-closed-bars{display:flex;flex-direction:column-reverse;align-self:flex-end;width:40%}.support-closed-bars>span{display:block;width:100%}.support-chart-key{font-size:12px}:root .support-chart button.support-month:hover{background:var(--ui-surface-alt)}
+@media(max-width:700px){.support-chart{grid-template-columns:repeat(12,52px)}}
