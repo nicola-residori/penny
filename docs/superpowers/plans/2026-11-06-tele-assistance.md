@@ -1,0 +1,9 @@
+# Tele-assistenza
+
+Richiesta dell'utente: apertura da cliente/sezione dedicata, richiedente selezionato o creato e legato al cliente, tecnico, orario server automatico; chiusura risolta/parziale/non risolta con orario proposto modificabile e commenti; eliminazione definitiva in ogni stato; grafico mensile/anno e ore per cliente e tecnico.
+
+Implementazione: un INTERVENTION esistente come identità della chiamata, tabella specializzata V133 uno-a-uno per timestamp/esito/contatto/tecnico e commenti. Nessuna doppia registrazione. ACTIVITY_READ/WRITE + CUSTOMERS_READ; creazione contatto richiede CUSTOMERS_WRITE. Selezione tecnici abilitati alla scrittura attività. Il generico editor interventi indirizza al dettaglio specifico e non può bypassare la macchina a stati. Collegamenti mail esistenti riutilizzabili. Cancellazione transazionale rimuove chiamata, commenti, intervento e collegamenti, preservando email e documenti originali; audit tecnico senza contenuti.
+
+UI: nuova navigazione Tele-assistenza + tab cliente; Button/SearchControl/Select/Table/DetailModal comuni. Form rapido con motivo facoltativo. Dettaglio con tempi, esito, commenti e chiusura. Stacked bar mensile accessibile (blu avviata/verde risolta/ambra parziale/rosso non risolta), anno corrente predefinito e anni storici; riepilogo ore chiuse per tecnico. Fuso aggregazioni Europe/Rome; intervalli a cavallo anno ripartiti per tempo effettivo, assistenze in corso escluse dalle ore chiuse e sempre raggiungibili.
+
+Test: richiedente condiviso valido/non associato rifiutato; creazione atomica contatto; tecnici/permessi; doppia chiusura; orario prima apertura/futuro; cancellazione aperta/chiusa e dipendenze; ore/DST/anni; UI apertura/chiusura/commenti/conferma e grafico zero. Test e build solo su CT111 isolato; backup e rilascio controllato, branch senza merge.
