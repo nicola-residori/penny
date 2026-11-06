@@ -19,3 +19,11 @@ Ogni utente autenticato vede le chiamate aperte tramite il pulsante globale in t
 La schermata completa mostra in alto le chiamate in corso con timer HH:mm:ss aggiornato ogni secondo e tecnico assegnato, anche se aperte nei giorni precedenti. Subito sotto compare l'elenco della giornata, con stato e ordine cronologico decrescente. La giornata è selezionabile; l'anno controlla solo i riepiloghi collocati più in basso. Elenco, bacheca e notifiche si aggiornano ogni 15 secondi quando la pagina è visibile, al focus e dopo operazioni locali.
 
 All'assegnazione viene creata in transazione una notifica interna privata per il tecnico, anche per le chiamate già aperte al rilascio (V134). Campanella con conteggio e avviso in-app; nessun invio email o notifica del sistema operativo. La lettura è persistente e riservata al destinatario. La chiusura marca letta la notifica; l'annullamento la elimina tramite FK. Le notifiche non concedono accesso a dati o operazioni altrimenti non autorizzati.
+
+## Dataset di prova tele-assistenza
+
+Il file `backend/src/main/resources/demo/seed-support-demo.sql` aggiunge soltanto dati con marcatore `PENNY_SUPPORT_DEMO_V1`: 4 aziende `[DEMO ASSISTENZA]`, 8 sedi, 8 contatti (uno condiviso fra due aziende) e 43 chiamate. Dieci chiuse sono distribuite nella giornata di caricamento, sei nei giorni precedenti, ventiquattro nei mesi passati e tre restano aperte (una dal giorno precedente). Gli esiti chiusi sono 14 risolte, 13 parziali e 13 non risolte. I tecnici vengono scelti fra gli account esistenti attivi e abilitati, senza creare credenziali. Solo le tre chiamate aperte producono notifiche demo non lette.
+
+Lo script è transazionale e ripetibile: non duplica i casi e non sovrascrive le modifiche fatte alle chiamate già caricate. Le nuove aziende sono prospect fino alla prima vendita, come previsto dal CRM. Il reset totale amministrativo comprende questi dati. Il test `SupportDemoSeedTest` verifica quantità, stati, associazioni, notifiche, ripetibilità e conservazione di un'anagrafica preesistente.
+
+Sul server viene conservata una copia operativa in `/opt/penny/scripts/seed-support-demo.sql`. Il caricamento esplicito è preceduto da backup verificato e controllo delle impronte dei dati non demo. La presenza del file nelle risorse backend non lo esegue automaticamente all'avvio.
